@@ -1,0 +1,54 @@
+:root {
+  --bg: #0a0e14;
+  --panel: #121821;
+  --panel2: #0f141c;
+  --line: #1e2733;
+  --txt: #e6edf3;
+  --mut: #7d8896;
+  --dim: #4a5563;
+  --green: #26d07c;
+  --green-dim: #16331f;
+  --red: #f0556d;
+  --red-dim: #33161c;
+  --blue: #3b82c4;
+  --gold: #d4a948;
+  --accent: #26d07c;
+  --aplus: #26d07c;
+  --a: #3b82c4;
+  --b: #d4a948;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--txt);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+select,
+input,
+textarea {
+  font-family: inherit;
+  font-size: 14px;
+}

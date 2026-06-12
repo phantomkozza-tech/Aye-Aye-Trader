@@ -7,6 +7,7 @@ import AddTradeView from "@/components/add-trade/AddTradeView";
 import AccountsView from "@/components/accounts/AccountsView";
 import SettingsView from "@/components/settings/SettingsView";
 import BlownView from "@/components/blown/BlownView";
+import StrategiesView from "@/components/strategies/StrategiesView";
 
 type TabId = "dash" | "log" | "accts" | "blown" | "strats" | "report" | "notes" | "add" | "settings";
 
@@ -62,6 +63,7 @@ function JournalShell() {
       case "accts":    return <AccountsView />;
       case "settings": return <SettingsView />;
       case "blown":    return <BlownView />;
+      case "strats":   return <StrategiesView />;
       default:         return <ComingSoon label={TABS.find((t) => t.id === tab)?.label ?? tab} />;
     }
   };
@@ -69,18 +71,20 @@ function JournalShell() {
   return (
     <div style={{ background: "var(--bg)", minHeight: "100vh" }}>
       <nav style={{
-        display: "flex", justifyContent: "center", gap: 2, padding: "0 16px",
-        background: "var(--panel)", borderBottom: "1px solid var(--line)",
-        overflowX: "auto", position: "sticky", top: 55, zIndex: 90,
+        display: "flex", gap: 6, padding: "10px 24px",
+        background: "var(--bg)", flexWrap: "wrap",
+        position: "sticky", top: 75, zIndex: 90,
+        marginBottom: 4,
       }}>
         {TABS.map((t) => (
           <button key={t.id} onClick={() => goTab(t.id)} style={{
-            background: "transparent", border: "none",
-            padding: "10px 14px",
-            borderBottom: `2px solid ${tab === t.id ? "var(--green)" : "transparent"}`,
-            fontSize: 12, fontWeight: tab === t.id ? 700 : 500,
+            background: tab === t.id ? "var(--panel)" : "transparent",
+            border: `1px solid ${tab === t.id ? "var(--line)" : "transparent"}`,
+            borderRadius: 8,
+            padding: "10px 20px",
+            fontSize: 13, fontWeight: 600,
             color: tab === t.id ? "var(--green)" : "var(--mut)",
-            cursor: "pointer", whiteSpace: "nowrap", transition: ".12s",
+            cursor: "pointer", whiteSpace: "nowrap", transition: ".15s",
           }}>
             {t.label}
           </button>

@@ -48,6 +48,7 @@ export interface Account {
   pdll: number;
   status: AccountStatus;
   blownDate?: string;
+  blownTradeId?: string;
   phases: Phase[];
   resets?: Reset[];
 }
@@ -61,6 +62,7 @@ export interface TradeLeg {
   sl?: number;
   comm?: number;
   phase?: string;
+  slip?: number;  // copy-lag slippage cost
 }
 
 export interface Trade {
@@ -69,15 +71,21 @@ export interface Trade {
   inst: string;
   dir: Direction;
   setup: string;
+  setupId?: string;
   grade: Grade;
+  r?: string;           // R-multiple as string e.g. "1.5", "-0.5"
+  metCrit?: number[];   // indices of met strategy criteria
   entryTime?: string;
   exitTime?: string;
-  criteria?: string[];
-  feelings?: string[];
-  actions?: string[];
-  execution?: string[];
-  note?: string;
-  screenshots?: string[];
+  disc?: string;        // discipline score /12
+  plan?: string;        // followed plan: yes/no/partial
+  notes?: string;       // rich text notes (may contain embedded img data-paths)
+  shots?: string[];     // legacy screenshot paths (Dropbox)
+  tags?: {
+    feelings: string[];
+    actions: string[];
+    execution: string[];
+  };
   legs: TradeLeg[];
 }
 

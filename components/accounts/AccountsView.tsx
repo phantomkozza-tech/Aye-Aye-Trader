@@ -293,11 +293,22 @@ export default function AccountsView() {
 
   return (
     <div style={{ padding: "20px 24px", maxWidth: 1200, margin: "0 auto" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+      <div style={{ marginBottom: 20 }}>
         <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>Your Accounts</h3>
-        <button className="btn" style={{ background: "var(--green)", color: "#04140b", border: "none", fontWeight: 700, fontSize: 18, padding: "6px 16px" }}
-          onClick={openAdd}>+</button>
       </div>
+
+      {/* Fixed FAB — bottom right, matches V1 */}
+      <button onClick={openAdd} title="Add account" style={{
+        position: "fixed", right: 32, bottom: 32, width: 58, height: 58,
+        borderRadius: "50%", background: "var(--green)", color: "#04140b",
+        fontSize: 30, fontWeight: 700, border: "none", cursor: "pointer",
+        boxShadow: "0 6px 22px rgba(38,208,124,.45)", zIndex: 50,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        lineHeight: 1, transition: ".15s",
+      }}
+        onMouseOver={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.06)"; }}
+        onMouseOut={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)"; }}
+      >+</button>
 
       {active.length === 0 ? (
         <div className="empty-state">

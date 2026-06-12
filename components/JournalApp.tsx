@@ -70,7 +70,7 @@ function JournalShell({ userEmail }: { userEmail: string }) {
   };
 
   return (
-    <div style={{ background: "var(--bg)", minHeight: "100vh" }}>
+    <div style={{ background: "var(--bg)", minHeight: "100vh", position: "relative", zIndex: 1 }}>
       <DashboardHeader userEmail={userEmail} />
       <nav style={{
         display: "flex", gap: 6, padding: "10px 24px",

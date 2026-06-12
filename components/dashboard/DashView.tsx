@@ -3,16 +3,23 @@
 import { useState, useEffect, useRef } from "react";
 import { useDB } from "@/context/DBContext";
 import {
-  fmt, fmtDur, filteredTrades, calcDashStats,
-  legNet, legComm, tradeDurMin, acctMap,
-  inDateRange, type FilteredTrade,
+  fmt, filteredTrades, calcDashStats, legNet, inDateRange, type FilteredTrade,
 } from "@/lib/db";
 
-// ── Palette ──────────────────────────────────────────────────
-const PALETTE = ["#26d07c","#3b82c4","#d4a948","#9b6bd4","#e8825a","#5ac8c8","#c85a9b","#7c8aef"];
 const DOWS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const PALETTE = ["#26d07c","#3b82c4","#d4a948","#9b6bd4","#e8825a","#5ac8c8","#c85a9b","#7c8aef"];
 
-// ── Tiny chart renderer using Chart.js (CDN loaded by bridge / or we import) ──
+// V1 base chart options
+const BASE_OPTS = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { legend: { labels: { color: "#e6edf3" } } },
+  scales: {
+    x: { grid: { color: "#1e2733" }, ticks: { color: "#7d8896" } },
+    y: { grid: { color: "#1e2733" }, ticks: { color: "#7d8896" } },
+  },
+};
+
 function useChartJS() {
   const [ready, setReady] = useState(false);
   useEffect(() => {
@@ -25,39 +32,20 @@ function useChartJS() {
   return ready;
 }
 
-const BASE_OPTS = {
-  responsive: true,
-  maintainAspectRatio: false,
-  animation: { duration: 300 },
-  plugins: { legend: { display: false }, tooltip: { callbacks: {} } },
-  scales: {
-    x: { grid: { color: "rgba(255,255,255,.06)" }, ticks: { color: "#7a8a9a", font: { size: 11 } } },
-    y: { grid: { color: "rgba(255,255,255,.06)" }, ticks: { color: "#7a8a9a", font: { size: 11 } } },
-  },
-};
-
-function ChartCanvas({
-  id, config, chartReady,
-}: { id: string; config: any; chartReady: boolean }) {
+function ChartCanvas({ id, config, ready }: { id: string; config: any; ready: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
-  const instanceRef = useRef<any>(null);
-
+  const inst = useRef<any>(null);
   useEffect(() => {
-    if (!chartReady || !ref.current || !config) return;
-    const Chart = (window as any).Chart;
-    if (instanceRef.current) { instanceRef.current.destroy(); }
-    instanceRef.current = new Chart(ref.current, config);
-    return () => { instanceRef.current?.destroy(); instanceRef.current = null; };
-  }, [chartReady, config]);
-
-  return <canvas ref={ref} id={id} style={{ width: "100%", height: "100%" }} />;
+    if (!ready || !ref.current || !config) return;
+    inst.current?.destroy();
+    inst.current = new (window as any).Chart(ref.current, config);
+    return () => { inst.current?.destroy(); inst.current = null; };
+  }, [ready, JSON.stringify(config)]);
+  return <canvas ref={ref} style={{ maxWidth: "100%" }} />;
 }
 
-// ── Calendar ─────────────────────────────────────────────────
-function Calendar({
-  db, selAccts, showBlown, from, to,
-  onDayClick,
-}: {
+// ── V1 Calendar ──────────────────────────────────────────────
+function Calendar({ db, selAccts, showBlown, from, to, onDayClick }: {
   db: any; selAccts: Set<string>; showBlown: boolean;
   from: string; to: string; onDayClick: (date: string) => void;
 }) {
@@ -66,14 +54,12 @@ function Calendar({
   const allow = new Set(
     db.accounts.filter((a: any) => showBlown || a.status !== "blown").map((a: any) => a.id)
   );
-
   const y = calDate.getFullYear(), m = calDate.getMonth();
   const monthLabel = calDate.toLocaleString("default", { month: "long", year: "numeric" });
   const first = new Date(y, m, 1).getDay();
   const days = new Date(y, m + 1, 0).getDate();
   const prevDays = new Date(y, m, 0).getDate();
 
-  // P&L by day
   const byDay: Record<number, { pnl: number; n: number }> = {};
   db.trades.forEach((t: any) => {
     const d = new Date(t.date + "T00:00");
@@ -99,40 +85,26 @@ function Calendar({
     const dayNum = i - first + 1;
     const inMonth = dayNum >= 1 && dayNum <= days;
     const info = inMonth ? byDay[dayNum] : null;
-
-    const cellStyle: React.CSSProperties = {
-      background: !inMonth ? "rgba(255,255,255,.02)"
-        : info ? (info.pnl >= 0 ? "rgba(38,208,124,.13)" : "rgba(240,85,109,.13)") : "var(--panel2)",
-      borderRadius: 8,
-      border: "1px solid var(--line)",
-      padding: "7px 8px",
-      minHeight: 68,
-      cursor: info ? "pointer" : "default",
-      opacity: !inMonth ? 0.35 : 1,
-    };
+    const ds = `${y}-${String(m + 1).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
 
     let displayDay: number;
     if (dayNum < 1) displayDay = prevDays + dayNum;
     else if (dayNum > days) displayDay = dayNum - days;
     else displayDay = dayNum;
 
-    const ds = `${y}-${String(m + 1).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
+    let cellClass = "cal-cell";
+    if (!inMonth) cellClass += " out";
+    else if (info) cellClass += info.pnl >= 0 ? " win" : " loss";
 
     cells.push(
-      <div
-        key={`cell-${i}`}
-        style={cellStyle}
-        onClick={() => info && inMonth && onDayClick(ds)}
-      >
-        <div style={{ fontSize: 11, color: "var(--mut)", fontWeight: 600 }}>{displayDay}</div>
+      <div key={`c${i}`} className={cellClass}
+        style={{ cursor: info && inMonth ? "pointer" : "default" }}
+        onClick={() => info && inMonth && onDayClick(ds)}>
+        <div className="dnum">{displayDay}</div>
         {info && (
           <>
-            <div style={{ fontSize: 13, fontWeight: 800, color: info.pnl >= 0 ? "var(--green)" : "var(--red)", marginTop: 4 }}>
-              {fmt(info.pnl)}
-            </div>
-            <div style={{ fontSize: 10, color: "var(--dim)", marginTop: 2 }}>
-              {info.n} trade{info.n !== 1 ? "s" : ""}
-            </div>
+            <div className="dpnl">{fmt(info.pnl)}</div>
+            <div className="dn">{info.n} trade{info.n !== 1 ? "s" : ""}</div>
           </>
         )}
       </div>
@@ -141,15 +113,12 @@ function Calendar({
     if (inMonth && info) { weekPnl += info.pnl; weekN++; }
 
     if (i % 7 === 6) {
-      const cls = weekN ? (weekPnl >= 0 ? "var(--green)" : "var(--red)") : "var(--dim)";
+      const wkClass = weekN ? (weekPnl >= 0 ? "win" : "loss") : "";
       cells.push(
-        <div key={`week-${weekNum}`} style={{
-          background: "var(--panel)", borderRadius: 8, border: "1px solid var(--line)",
-          padding: "7px 8px", minHeight: 68, display: "flex", flexDirection: "column", justifyContent: "center",
-        }}>
-          <div style={{ fontSize: 10, color: "var(--mut)", marginBottom: 4 }}>Week {weekNum}</div>
-          <div style={{ fontSize: 13, fontWeight: 800, color: cls }}>{fmt(weekPnl)}</div>
-          <div style={{ fontSize: 10, color: "var(--dim)", marginTop: 2 }}>{weekN} day{weekN !== 1 ? "s" : ""}</div>
+        <div key={`w${weekNum}`} className="cal-week">
+          <div className="wk-label">Week {weekNum}</div>
+          <div className={`wk-pnl ${wkClass}`}>{fmt(weekPnl)}</div>
+          <div className="wk-days">{weekN} day{weekN !== 1 ? "s" : ""}</div>
         </div>
       );
       weekPnl = 0; weekN = 0; weekNum++;
@@ -157,24 +126,20 @@ function Calendar({
   }
 
   return (
-    <div style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 12, padding: 18 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{monthLabel}</h2>
-        <div style={{ display: "flex", gap: 8 }}>
+    <div className="panel">
+      <div className="cal-head">
+        <h2>{monthLabel}</h2>
+        <div className="cal-nav">
           <button className="btn" onClick={() => setCalDate(new Date(y, m - 1, 1))}>‹</button>
           <button className="btn" onClick={() => setCalDate(new Date())}>Today</button>
           <button className="btn" onClick={() => setCalDate(new Date(y, m + 1, 1))}>›</button>
         </div>
       </div>
-      {/* Day-of-week headers */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr) 1.15fr", gap: 7, marginBottom: 7 }}>
-        {DOWS.map((d) => (
-          <div key={d} style={{ fontSize: 11, color: "var(--mut)", textAlign: "center", fontWeight: 600 }}>{d}</div>
-        ))}
-        <div style={{ fontSize: 11, color: "var(--mut)", textAlign: "center", fontWeight: 600 }}>Weekly</div>
+      <div className="cal-grid">
+        {DOWS.map((d) => <div key={d} className="cal-dow">{d}</div>)}
+        <div className="cal-dow">Weekly</div>
       </div>
-      {/* Calendar cells */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr) 1.15fr", gap: 7 }}>
+      <div className="cal-grid" style={{ marginTop: 8 }}>
         {cells}
       </div>
     </div>
@@ -195,7 +160,6 @@ export default function DashView({ onDayClick }: { onDayClick?: (date: string) =
   const allow = new Set(
     db.accounts.filter((a) => showBlown || a.status !== "blown").map((a) => a.id)
   );
-
   const trades = filteredTrades(db, selAccts, allow, from, to);
   const stats = calcDashStats(db, trades, allow, from, to);
 
@@ -207,197 +171,166 @@ export default function DashView({ onDayClick }: { onDayClick?: (date: string) =
     });
   };
 
-  // Chart configs
+  const acctLabel = selAccts.size === 0
+    ? "all accounts"
+    : db.accounts.filter((a) => selAccts.has(a.id)).map((a) => a.name).join(", ");
+
+  // Chart configs — V1 base opts
   const equityConfig = chartReady ? {
     type: "line",
     data: {
       labels: stats.equityCurve.map((_, i) => i + 1),
-      datasets: [{
-        data: stats.equityCurve,
-        borderColor: "#26d07c",
-        backgroundColor: "rgba(38,208,124,.1)",
-        fill: true, tension: 0.25, pointRadius: 2, borderWidth: 2,
-      }],
+      datasets: [{ data: stats.equityCurve, borderColor: "#26d07c", backgroundColor: "rgba(38,208,124,.1)", fill: true, tension: .25, pointRadius: 2, borderWidth: 2 }],
     },
-    options: { ...BASE_OPTS },
+    options: { ...BASE_OPTS, plugins: { ...BASE_OPTS.plugins, legend: { display: false } } },
   } : null;
 
   const setupConfig = chartReady ? {
     type: "bar",
     data: {
       labels: stats.setupLabels,
-      datasets: [{
-        data: stats.setupWr,
-        backgroundColor: stats.setupLabels.map((_, i) => PALETTE[i % PALETTE.length]),
-        borderRadius: 6,
-      }],
+      datasets: [{ data: stats.setupWr, backgroundColor: stats.setupLabels.map((_, i) => PALETTE[i % PALETTE.length]), borderRadius: 6 }],
     },
-    options: { ...BASE_OPTS, scales: { ...BASE_OPTS.scales, y: { ...BASE_OPTS.scales.y, max: 100 } } },
+    options: { ...BASE_OPTS, plugins: { ...BASE_OPTS.plugins, legend: { display: false } }, scales: { ...BASE_OPTS.scales, y: { ...BASE_OPTS.scales.y, max: 100 } } },
   } : null;
 
   const gradeConfig = chartReady ? {
     type: "bar",
     data: {
       labels: ["A+", "A", "B"],
-      datasets: [{
-        data: stats.gradeExp,
-        backgroundColor: ["#26d07c", "#3b82c4", "#d4a948"],
-        borderRadius: 6,
-      }],
+      datasets: [{ data: stats.gradeExp, backgroundColor: ["#26d07c","#3b82c4","#d4a948"], borderRadius: 6 }],
     },
-    options: { ...BASE_OPTS },
+    options: { ...BASE_OPTS, plugins: { ...BASE_OPTS.plugins, legend: { display: false } } },
   } : null;
 
   const acctConfig = chartReady ? {
     type: "bar",
     data: {
       labels: stats.acctLabels,
-      datasets: [{
-        data: stats.acctPnl,
-        backgroundColor: stats.acctPnl.map((v) => (v >= 0 ? "#26d07c" : "#f0556d")),
-        borderRadius: 6,
-      }],
+      datasets: [{ data: stats.acctPnl, backgroundColor: stats.acctPnl.map((v) => v >= 0 ? "#26d07c" : "#f0556d"), borderRadius: 6 }],
     },
-    options: { ...BASE_OPTS },
+    options: { ...BASE_OPTS, plugins: { ...BASE_OPTS.plugins, legend: { display: false } } },
   } : null;
 
-  const acctLabel = selAccts.size === 0
-    ? "all accounts"
-    : db.accounts.filter((a) => selAccts.has(a.id)).map((a) => a.name).join(", ");
-
   return (
-    <div style={{ padding: "20px 24px", maxWidth: 1400, margin: "0 auto" }}>
+    <div className="wrap">
 
-      {/* ── Filters ── */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 20, alignItems: "flex-start" }}>
-
-        {/* Account chips */}
-        <div style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 10, padding: "10px 14px", minWidth: 180 }}>
-          <div
-            style={{ fontSize: 12, color: "var(--mut)", cursor: "pointer", userSelect: "none", display: "flex", alignItems: "center", gap: 6 }}
+      {/* ── Filters — V1 single bar ── */}
+      <div className="filters">
+        <div className="fseg">
+          <label
+            className={`chip-toggle${chipsOpen ? "" : " collapsed"}`}
             onClick={() => setChipsOpen((v) => !v)}
+            style={{ cursor: "pointer" }}
           >
-            <span style={{ fontSize: 10 }}>{chipsOpen ? "▾" : "▸"}</span> Accounts
-          </div>
+            <span className="caret">▾</span> Accounts
+          </label>
           {chipsOpen && (
-            <div style={{ marginTop: 10 }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--mut)", marginBottom: 10, cursor: "pointer" }}>
+            <div style={{ marginTop: 6 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--mut)", marginBottom: 8, cursor: "pointer", textTransform: "none", letterSpacing: 0 }}>
                 <input type="checkbox" checked={showBlown} onChange={(e) => setShowBlown(e.target.checked)} />
-                show blown
+                show blown accounts
               </label>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              <div className="chips">
                 {db.accounts
                   .filter((a) => showBlown || a.status !== "blown")
                   .map((a) => (
-                    <button
-                      key={a.id}
-                      onClick={() => toggleAcct(a.id)}
-                      style={{
-                        fontSize: 11, padding: "4px 10px", borderRadius: 20,
-                        border: "1px solid",
-                        borderColor: selAccts.has(a.id) ? "var(--green)" : "var(--line)",
-                        background: selAccts.has(a.id) ? "rgba(38,208,124,.15)" : "transparent",
-                        color: selAccts.has(a.id) ? "var(--green)" : "var(--mut)",
-                        cursor: "pointer",
-                      }}
-                    >
+                    <span key={a.id}
+                      className={`chip${selAccts.has(a.id) ? " on" : ""}${a.status === "blown" ? " blown-chip" : ""}`}
+                      onClick={() => toggleAcct(a.id)}>
                       {a.name}{a.status === "blown" ? " ✖" : ""}
-                    </button>
+                    </span>
                   ))}
               </div>
             </div>
           )}
         </div>
 
-        {/* Date range */}
-        <div style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 10, padding: "10px 14px" }}>
-          <div style={{ fontSize: 12, color: "var(--mut)", marginBottom: 8 }}>Date range</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)}
-              style={{ background: "var(--panel2)", border: "1px solid var(--line)", borderRadius: 6, color: "var(--txt)", padding: "4px 8px", fontSize: 12 }} />
+        <div className="fseg">
+          <label>Date range</label>
+          <div className="range-row">
+            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} title="From" />
             <span style={{ color: "var(--mut)" }}>→</span>
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)}
-              style={{ background: "var(--panel2)", border: "1px solid var(--line)", borderRadius: 6, color: "var(--txt)", padding: "4px 8px", fontSize: 12 }} />
+            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} title="To" />
             <button className="btn sm" onClick={() => { setFrom(""); setTo(""); }}>All</button>
           </div>
         </div>
       </div>
 
       {/* ── Stat cards ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
-        {[
-          { lbl: "Net P&L", val: fmt(stats.pnl), sub: `${stats.n} trades`, cls: stats.pnl >= 0 ? "pos" : "neg" },
-          { lbl: "Win Rate", val: `${stats.wr}%`, sub: `${stats.wins}W / ${stats.losses}L`, cls: "" },
-          { lbl: "Expectancy", val: `${stats.exp >= 0 ? "+" : ""}${stats.exp.toFixed(2)}R`, sub: "per trade", cls: stats.exp >= 0 ? "pos" : "neg" },
-          { lbl: "Profit Factor", val: stats.pf.toFixed(2), sub: "gross win / loss", cls: "" },
-        ].map((c) => (
-          <div key={c.lbl} className="card" style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 12, padding: "16px 20px" }}>
-            <div style={{ fontSize: 11, color: "var(--mut)", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 6 }}>{c.lbl}</div>
-            <div className={`val ${c.cls}`} style={{ fontSize: 26, fontWeight: 800, lineHeight: 1 }}>{c.val}</div>
-            <div style={{ fontSize: 11, color: "var(--mut)", marginTop: 6 }}>{c.sub}</div>
+      <div className="stat-grid">
+        <div className="card">
+          <div className="lbl">Net P&L</div>
+          <div className={`val ${stats.pnl >= 0 ? "pos" : "neg"}`}>{fmt(stats.pnl)}</div>
+          <div className="sub">{stats.n} trades</div>
+        </div>
+        <div className="card">
+          <div className="lbl">Win Rate</div>
+          <div className="val">{stats.wr}%</div>
+          <div className="sub">{stats.wins}W / {stats.losses}L</div>
+        </div>
+        <div className="card">
+          <div className="lbl">Expectancy</div>
+          <div className={`val ${stats.exp >= 0 ? "pos" : "neg"}`}>
+            {stats.exp >= 0 ? "+" : ""}{stats.exp.toFixed(2)}R
           </div>
-        ))}
+          <div className="sub">per trade</div>
+        </div>
+        <div className="card">
+          <div className="lbl">Profit Factor</div>
+          <div className="val">{stats.pf.toFixed(2)}</div>
+          <div className="sub">gross win / loss</div>
+        </div>
       </div>
 
       {/* ── Slip banner ── */}
       {stats.slip > 0 && (
-        <div className="card" style={{ background: "var(--panel)", border: "1px solid var(--gold)", borderRadius: 12, padding: "14px 20px", marginBottom: 20 }}>
-          <div style={{ fontSize: 11, color: "var(--gold)", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 4 }}>
-            ↯ Copy-Lag Cost <span style={{ color: "var(--mut)" }}>— what copy-trade slippage cost in this view</span>
+        <div className="card" style={{ marginBottom: 18, borderColor: "var(--gold)" }}>
+          <div className="lbl" style={{ color: "var(--gold)" }}>
+            ↯ Copy-Lag Cost <span style={{ color: "var(--mut)", textTransform: "none", letterSpacing: 0, fontWeight: 400 }}>— what copy-trade slippage cost in this view</span>
           </div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: "var(--gold)" }}>{fmt(stats.slip)}</div>
-          <div style={{ fontSize: 11, color: "var(--mut)", marginTop: 4 }}>
-            {fmt(stats.n ? stats.slip / stats.n : 0)} avg per trade · {stats.n} trades
-          </div>
+          <div className="val" style={{ color: "var(--gold)" }}>{fmt(stats.slip)}</div>
+          <div className="sub">across selected accounts &amp; period</div>
         </div>
       )}
 
-      {/* ── Charts row 1 ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
-        <div style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 12, padding: 18 }}>
-          <h3 style={{ fontSize: 13, fontWeight: 700, margin: "0 0 12px", color: "var(--txt)" }}>
-            Equity Curve <span style={{ color: "var(--mut)", fontWeight: 400 }}>· {acctLabel}</span>
-          </h3>
-          <div style={{ height: 200, position: "relative" }}>
-            <ChartCanvas id="c-equity" config={equityConfig} chartReady={chartReady} />
+      {/* ── Charts row 1: equity + win rate by setup ── */}
+      <div className="chart-grid even">
+        <div className="panel">
+          <h3>Equity Curve <span>cumulative P&L · {acctLabel}</span></h3>
+          <div className="chart-box">
+            <ChartCanvas id="c-equity" config={equityConfig} ready={chartReady} />
           </div>
         </div>
-        <div style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 12, padding: 18 }}>
-          <h3 style={{ fontSize: 13, fontWeight: 700, margin: "0 0 12px", color: "var(--txt)" }}>Win Rate by Setup</h3>
-          <div style={{ height: 200, position: "relative" }}>
-            <ChartCanvas id="c-setup" config={setupConfig} chartReady={chartReady} />
+        <div className="panel">
+          <h3>Win Rate by Setup</h3>
+          <div className="chart-box">
+            <ChartCanvas id="c-setup" config={setupConfig} ready={chartReady} />
           </div>
         </div>
       </div>
 
-      {/* ── Charts row 2 ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
-        <div style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 12, padding: 18 }}>
-          <h3 style={{ fontSize: 13, fontWeight: 700, margin: "0 0 12px", color: "var(--txt)" }}>
-            Performance by Grade <span style={{ color: "var(--mut)", fontWeight: 400 }}>avg R — does A+ win?</span>
-          </h3>
-          <div style={{ height: 160, position: "relative" }}>
-            <ChartCanvas id="c-grade" config={gradeConfig} chartReady={chartReady} />
+      {/* ── Charts row 2: grade + acct ── */}
+      <div className="chart-grid even">
+        <div className="panel">
+          <h3>Performance by Grade <span>avg R — does A+ win?</span></h3>
+          <div className="chart-box sm">
+            <ChartCanvas id="c-grade" config={gradeConfig} ready={chartReady} />
           </div>
         </div>
-        <div style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 12, padding: 18 }}>
-          <h3 style={{ fontSize: 13, fontWeight: 700, margin: "0 0 12px", color: "var(--txt)" }}>
-            P&L by Account <span style={{ color: "var(--mut)", fontWeight: 400 }}>in this period</span>
-          </h3>
-          <div style={{ height: 160, position: "relative" }}>
-            <ChartCanvas id="c-acct" config={acctConfig} chartReady={chartReady} />
+        <div className="panel">
+          <h3>P&amp;L by Account <span>in this period</span></h3>
+          <div className="chart-box sm">
+            <ChartCanvas id="c-acct" config={acctConfig} ready={chartReady} />
           </div>
         </div>
       </div>
 
       {/* ── Calendar ── */}
       <Calendar
-        db={db}
-        selAccts={selAccts}
-        showBlown={showBlown}
-        from={from}
-        to={to}
-        onDayClick={(date) => onDayClick?.(date)}
+        db={db} selAccts={selAccts} showBlown={showBlown}
+        from={from} to={to}
+        onDayClick={(d) => onDayClick?.(d)}
       />
     </div>
   );

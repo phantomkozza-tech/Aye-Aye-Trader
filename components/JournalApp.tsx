@@ -4,6 +4,8 @@ import { useState } from "react";
 import { DBProvider } from "@/context/DBContext";
 import DashView from "@/components/dashboard/DashView";
 import AddTradeView from "@/components/add-trade/AddTradeView";
+import AccountsView from "@/components/accounts/AccountsView";
+import SettingsView from "@/components/settings/SettingsView";
 
 type TabId = "dash" | "log" | "accts" | "blown" | "strats" | "report" | "notes" | "add" | "settings";
 
@@ -37,7 +39,6 @@ function JournalShell() {
   const goTab = (t: TabId) => { setTab(t); setDayDetail(null); };
 
   const renderView = () => {
-    // Day detail overlay (from calendar click)
     if (dayDetail) {
       return (
         <div style={{ padding: "20px 24px" }}>
@@ -55,15 +56,16 @@ function JournalShell() {
     }
 
     switch (tab) {
-      case "dash": return <DashView onDayClick={(d) => setDayDetail(d)} />;
-      case "add":  return <AddTradeView onDone={() => goTab("dash")} />;
-      default:     return <ComingSoon label={TABS.find((t) => t.id === tab)?.label ?? tab} />;
+      case "dash":     return <DashView onDayClick={(d) => setDayDetail(d)} />;
+      case "add":      return <AddTradeView onDone={() => goTab("dash")} />;
+      case "accts":    return <AccountsView />;
+      case "settings": return <SettingsView />;
+      default:         return <ComingSoon label={TABS.find((t) => t.id === tab)?.label ?? tab} />;
     }
   };
 
   return (
     <div style={{ background: "var(--bg)", minHeight: "100vh" }}>
-      {/* Tab nav */}
       <nav style={{
         display: "flex", gap: 2, padding: "0 16px",
         background: "var(--panel)", borderBottom: "1px solid var(--line)",
@@ -74,8 +76,7 @@ function JournalShell() {
             background: "transparent", border: "none",
             padding: "10px 14px",
             borderBottom: `2px solid ${tab === t.id ? "var(--green)" : "transparent"}`,
-            fontSize: 12,
-            fontWeight: tab === t.id ? 700 : 500,
+            fontSize: 12, fontWeight: tab === t.id ? 700 : 500,
             color: tab === t.id ? "var(--green)" : "var(--mut)",
             cursor: "pointer", whiteSpace: "nowrap", transition: ".12s",
           }}>
@@ -83,7 +84,6 @@ function JournalShell() {
           </button>
         ))}
       </nav>
-
       {renderView()}
     </div>
   );

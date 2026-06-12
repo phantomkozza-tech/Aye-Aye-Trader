@@ -9,6 +9,7 @@ import SettingsView from "@/components/settings/SettingsView";
 import BlownView from "@/components/blown/BlownView";
 import StrategiesView from "@/components/strategies/StrategiesView";
 import DashboardHeader from "@/components/DashboardHeader";
+import TradeLogView from "@/components/trade-log/TradeLogView";
 
 type TabId = "dash" | "log" | "accts" | "blown" | "strats" | "report" | "notes" | "add" | "settings";
 
@@ -60,6 +61,7 @@ function JournalShell({ userEmail }: { userEmail: string }) {
 
     switch (tab) {
       case "dash":     return <DashView onDayClick={(d) => setDayDetail(d)} />;
+      case "log":      return <TradeLogView onEditTrade={(id) => { goTab("add"); }} />;
       case "add":      return <AddTradeView onDone={() => goTab("dash")} />;
       case "accts":    return <AccountsView />;
       case "settings": return <SettingsView />;
@@ -75,6 +77,7 @@ function JournalShell({ userEmail }: { userEmail: string }) {
       <nav style={{
         display: "flex", gap: 6, padding: "10px 24px",
         background: "var(--bg)", flexWrap: "wrap",
+        justifyContent: "center",
         position: "sticky", top: 75, zIndex: 90,
         marginBottom: 4,
       }}>

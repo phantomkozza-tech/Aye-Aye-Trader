@@ -185,3 +185,19 @@ button, select, input, textarea { font-family: inherit; font-size: 14px; }
   .wrap { padding: 14px; }
   .stat-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Trade detail ── */
+.td-stats { display: grid; grid-template-columns: repeat(auto-fit,minmax(130px,1fr)); gap: 12px; margin-bottom: 18px; }
+.td-stat { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.td-stat .l { font-size: 10px; color: var(--mut); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 4px; }
+.td-stat .v { font-size: 20px; font-weight: 800; }
+.td-section { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 14px; }
+.td-section h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--mut); margin-bottom: 12px; }
+.td-notes { margin-top: 10px; font-size: 14px; line-height: 1.7; padding: 14px; background: var(--panel2); border-radius: 8px; }
+.td-notes ul { margin: 6px 0 6px 22px; }
+.acct-link { color: var(--blue); cursor: pointer; font-weight: 600; }
+.acct-link:hover { text-decoration: underline; }
+.acct-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.acct-tag { font-size: 10px; padding: 1px 7px; border-radius: 10px; background: var(--panel2); border: 1px solid var(--line); color: var(--mut); }
+.del { color: var(--dim); cursor: pointer; }
+.del:hover { color: var(--red); }

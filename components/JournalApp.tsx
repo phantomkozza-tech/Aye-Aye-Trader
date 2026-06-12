@@ -6,6 +6,7 @@ import DashView from "@/components/dashboard/DashView";
 import AddTradeView from "@/components/add-trade/AddTradeView";
 import AccountsView from "@/components/accounts/AccountsView";
 import SettingsView from "@/components/settings/SettingsView";
+import BlownView from "@/components/blown/BlownView";
 
 type TabId = "dash" | "log" | "accts" | "blown" | "strats" | "report" | "notes" | "add" | "settings";
 
@@ -60,6 +61,7 @@ function JournalShell() {
       case "add":      return <AddTradeView onDone={() => goTab("dash")} />;
       case "accts":    return <AccountsView />;
       case "settings": return <SettingsView />;
+      case "blown":    return <BlownView />;
       default:         return <ComingSoon label={TABS.find((t) => t.id === tab)?.label ?? tab} />;
     }
   };
@@ -67,9 +69,9 @@ function JournalShell() {
   return (
     <div style={{ background: "var(--bg)", minHeight: "100vh" }}>
       <nav style={{
-        display: "flex", gap: 2, padding: "0 16px",
+        display: "flex", justifyContent: "center", gap: 2, padding: "0 16px",
         background: "var(--panel)", borderBottom: "1px solid var(--line)",
-        overflowX: "auto", position: "sticky", top: 41, zIndex: 90,
+        overflowX: "auto", position: "sticky", top: 55, zIndex: 90,
       }}>
         {TABS.map((t) => (
           <button key={t.id} onClick={() => goTab(t.id)} style={{

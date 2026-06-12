@@ -8,6 +8,7 @@ import AccountsView from "@/components/accounts/AccountsView";
 import SettingsView from "@/components/settings/SettingsView";
 import BlownView from "@/components/blown/BlownView";
 import StrategiesView from "@/components/strategies/StrategiesView";
+import DashboardHeader from "@/components/DashboardHeader";
 
 type TabId = "dash" | "log" | "accts" | "blown" | "strats" | "report" | "notes" | "add" | "settings";
 
@@ -34,7 +35,7 @@ function ComingSoon({ label }: { label: string }) {
   );
 }
 
-function JournalShell() {
+function JournalShell({ userEmail }: { userEmail: string }) {
   const [tab, setTab] = useState<TabId>("dash");
   const [dayDetail, setDayDetail] = useState<string | null>(null);
 
@@ -70,6 +71,7 @@ function JournalShell() {
 
   return (
     <div style={{ background: "var(--bg)", minHeight: "100vh" }}>
+      <DashboardHeader userEmail={userEmail} />
       <nav style={{
         display: "flex", gap: 6, padding: "10px 24px",
         background: "var(--bg)", flexWrap: "wrap",
@@ -95,10 +97,10 @@ function JournalShell() {
   );
 }
 
-export default function JournalApp() {
+export default function JournalApp({ userEmail }: { userEmail: string }) {
   return (
     <DBProvider>
-      <JournalShell />
+      <JournalShell userEmail={userEmail} />
     </DBProvider>
   );
 }

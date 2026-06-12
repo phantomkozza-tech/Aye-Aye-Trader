@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import DashboardHeader from "@/components/DashboardHeader";
 import JournalApp from "@/components/JournalApp";
 
 export default async function DashboardPage() {
@@ -13,10 +12,5 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  return (
-    <>
-      <DashboardHeader userEmail={user.email ?? ""} />
-      <JournalApp />
-    </>
-  );
+  return <JournalApp userEmail={user.email ?? ""} />;
 }

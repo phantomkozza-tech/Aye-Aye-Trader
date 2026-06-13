@@ -213,7 +213,7 @@ export default function DashView({ onDayClick }: { onDayClick?: (date: string) =
   } : null;
 
   return (
-    <div className="wrap">
+    <div>
 
       {/* ── Filters — V1 single bar ── */}
       <div className="filters">
@@ -227,8 +227,9 @@ export default function DashView({ onDayClick }: { onDayClick?: (date: string) =
           </label>
           {chipsOpen && (
             <div style={{ marginTop: 6 }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--mut)", marginBottom: 8, cursor: "pointer", textTransform: "none", letterSpacing: 0 }}>
+              <label className="blown-toggle">
                 <input type="checkbox" checked={showBlown} onChange={(e) => setShowBlown(e.target.checked)} />
+                <span className="sw" />
                 show blown accounts
               </label>
               <div className="chips">
@@ -290,7 +291,9 @@ export default function DashView({ onDayClick }: { onDayClick?: (date: string) =
             ↯ Copy-Lag Cost <span style={{ color: "var(--mut)", textTransform: "none", letterSpacing: 0, fontWeight: 400 }}>— what copy-trade slippage cost in this view</span>
           </div>
           <div className="val" style={{ color: "var(--gold)" }}>{fmt(stats.slip)}</div>
-          <div className="sub">across selected accounts &amp; period</div>
+          <div className="sub">
+            {fmt(stats.slipN ? stats.slip / stats.slipN : 0)} avg per trade · {stats.slipN} trade{stats.slipN !== 1 ? "s" : ""}
+          </div>
         </div>
       )}
 

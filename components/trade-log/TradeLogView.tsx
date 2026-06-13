@@ -38,7 +38,7 @@ function TradeDetail({ trade, onBack, onEdit }: {
   ];
 
   return (
-    <div className="wrap">
+    <div>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
         <button className="btn" onClick={onBack}>←</button>
@@ -206,7 +206,7 @@ export default function TradeLogView({ onEditTrade }: { onEditTrade?: (id: strin
   }
 
   return (
-    <div className="wrap">
+    <div>
       <div className="panel">
         <h3>All Trades</h3>
 

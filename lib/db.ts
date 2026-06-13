@@ -111,6 +111,7 @@ export interface DashStats {
   exp: number;
   pf: number;
   slip: number;
+  slipN: number;   // count of trades with slippage (for "avg per trade" sub)
   equityCurve: number[];
   setupLabels: string[];
   setupWr: number[];
@@ -140,6 +141,9 @@ export function calcDashStats(
     (a, t) => a + (t._legs || []).reduce((x, l) => x + ((l as any).slip || 0), 0),
     0
   );
+  const slipN = trades.filter((t) =>
+    (t._legs || []).some((l) => ((l as any).slip || 0) > 0)
+  ).length;
 
   // Equity curve
   let cum = 0;
@@ -179,7 +183,7 @@ export function calcDashStats(
   });
   const acctLabels = visAccts.map((a) => a.name + (a.status === "blown" ? " ✖" : ""));
 
-  return { pnl, n, wr, wins: wins.length, losses: lossArr.length, exp, pf, slip, equityCurve, setupLabels, setupWr, gradeExp, acctLabels, acctPnl };
+  return { pnl, n, wr, wins: wins.length, losses: lossArr.length, exp, pf, slip, slipN, equityCurve, setupLabels, setupWr, gradeExp, acctLabels, acctPnl };
 }
 
 // ── Defaults ─────────────────────────────────────────────────

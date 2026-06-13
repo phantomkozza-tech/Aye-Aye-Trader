@@ -9,12 +9,17 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@blocknote/core": "^0.51.4",
+    "@blocknote/mantine": "^0.51.4",
+    "@blocknote/react": "^0.51.4",
+    "@mantine/core": "^7.17.8",
+    "@mantine/hooks": "^7.17.8",
+    "@supabase/ssr": "0.6.1",
+    "@supabase/supabase-js": "2.49.4",
+    "chart.js": "4.4.9",
     "next": "15.3.6",
     "react": "19.0.0",
-    "react-dom": "19.0.0",
-    "@supabase/supabase-js": "2.49.4",
-    "@supabase/ssr": "0.6.1",
-    "chart.js": "4.4.9"
+    "react-dom": "19.0.0"
   },
   "devDependencies": {
     "@types/node": "22.15.21",

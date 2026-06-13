@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { DBProvider } from "@/context/DBContext";
 import DashView from "@/components/dashboard/DashView";
 import AddTradeView from "@/components/add-trade/AddTradeView";
@@ -10,10 +11,20 @@ import BlownView from "@/components/blown/BlownView";
 import StrategiesView from "@/components/strategies/StrategiesView";
 import DashboardHeader from "@/components/DashboardHeader";
 import TradeLogView from "@/components/trade-log/TradeLogView";
-import NotesView from "@/components/notes/NotesView";
 import DayDetailView from "@/components/day-detail/DayDetailView";
 import CsvImportView from "@/components/csv-import/CsvImportView";
 import ReportView from "@/components/report/ReportView";
+
+// BlockNote uses browser-only APIs — must never run on the server
+const NotesView = dynamic(() => import("@/components/notes/NotesView"), {
+  ssr: false,
+  loading: () => (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center",
+      minHeight: 400, color: "var(--mut)", fontSize: 13 }}>
+      Loading editor…
+    </div>
+  ),
+});
 
 type TabId = "dash" | "log" | "accts" | "blown" | "strats" | "report" | "notes" | "add" | "settings";
 

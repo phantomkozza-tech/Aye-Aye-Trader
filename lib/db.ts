@@ -240,6 +240,7 @@ export function loadDB(): JournalDB {
     if (d.settings.rapidMins == null) d.settings.rapidMins = 5;
     if (!d.settings.brokers) d.settings.brokers = [];
     if (!d.notes) d.notes = [];
+    if (!d.templates) d.templates = [];
 
     d.accounts.forEach((a) => {
       if (!a.status) a.status = "active";
@@ -264,6 +265,7 @@ export function loadDB(): JournalDB {
       strategies: defaultStrategies(),
       settings: defaultSettings(),
       notes: [],
+      templates: [],
     };
   }
 }

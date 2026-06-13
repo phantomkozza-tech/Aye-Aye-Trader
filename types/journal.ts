@@ -134,6 +134,14 @@ export interface Note {
   body: string;
 }
 
+export interface NoteTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  blocks: any[]; // BlockNote document JSON
+  builtIn?: boolean; // true = shipped preset, false/absent = user-created
+}
+
 export interface JournalDB {
   accounts: Account[];
   trades: Trade[];
@@ -141,5 +149,6 @@ export interface JournalDB {
   strategies: Strategy[];
   settings: Settings;
   notes: Note[];
+  templates?: NoteTemplate[];
   _resetCostFixed?: boolean;
 }

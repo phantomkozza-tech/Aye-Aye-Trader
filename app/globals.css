@@ -201,3 +201,9 @@ button, select, input, textarea { font-family: inherit; font-size: 14px; }
 .acct-tag { font-size: 10px; padding: 1px 7px; border-radius: 10px; background: var(--panel2); border: 1px solid var(--line); color: var(--mut); }
 .del { color: var(--dim); cursor: pointer; }
 .del:hover { color: var(--red); }
+
+/* ── V1 view fade animation ── */
+@keyframes fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}

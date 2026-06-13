@@ -45,9 +45,9 @@ function JournalShell({ userEmail }: { userEmail: string }) {
   const renderView = () => {
     if (dayDetail) {
       return (
-        <div style={{ padding: "20px 24px" }}>
+        <div>
           <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
-            <button className="btn" onClick={() => setDayDetail(null)}>← Back</button>
+            <button className="btn" onClick={() => setDayDetail(null)}>←</button>
             <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>
               {new Date(dayDetail + "T12:00").toLocaleDateString(undefined, {
                 weekday: "long", month: "long", day: "numeric", year: "numeric",
@@ -61,7 +61,7 @@ function JournalShell({ userEmail }: { userEmail: string }) {
 
     switch (tab) {
       case "dash":     return <DashView onDayClick={(d) => setDayDetail(d)} />;
-      case "log":      return <TradeLogView onEditTrade={(id) => { goTab("add"); }} />;
+      case "log":      return <TradeLogView onEditTrade={() => goTab("add")} />;
       case "add":      return <AddTradeView onDone={() => goTab("dash")} />;
       case "accts":    return <AccountsView />;
       case "settings": return <SettingsView />;
@@ -72,30 +72,57 @@ function JournalShell({ userEmail }: { userEmail: string }) {
   };
 
   return (
-    <div style={{ background: "var(--bg)", minHeight: "100vh", position: "relative", zIndex: 1 }}>
-      <DashboardHeader userEmail={userEmail} />
-      <nav style={{
-        display: "flex", gap: 6, padding: "10px 24px",
-        background: "var(--bg)", flexWrap: "wrap",
-        justifyContent: "center",
-        position: "sticky", top: 75, zIndex: 90,
-        marginBottom: 4,
-      }}>
-        {TABS.map((t) => (
-          <button key={t.id} onClick={() => goTab(t.id)} style={{
-            background: tab === t.id ? "var(--panel)" : "transparent",
-            border: `1px solid ${tab === t.id ? "var(--line)" : "transparent"}`,
-            borderRadius: 8,
-            padding: "10px 20px",
-            fontSize: 13, fontWeight: 600,
-            color: tab === t.id ? "var(--green)" : "var(--mut)",
-            cursor: "pointer", whiteSpace: "nowrap", transition: ".15s",
-          }}>
-            {t.label}
-          </button>
-        ))}
-      </nav>
-      {renderView()}
+    // body::before glow is on <body> via globals.css; this div provides z-index:1 above it
+    <div style={{ minHeight: "100vh", position: "relative", zIndex: 1 }}>
+      {/*
+        V1 .wrap — max-width:1280px; margin:0 auto; padding:24px
+        Header + tabs + views all live inside this container.
+      */}
+      <div className="wrap">
+        <DashboardHeader userEmail={userEmail} />
+
+        {/*
+          V1 .tabs — display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap
+          Left-aligned, no background, no sticky.
+          .tab — padding:10px 20px; border-radius:8px; cursor:pointer; color:var(--mut);
+                 font-weight:600; border:1px solid transparent; transition:.15s
+          .tab:hover — color:var(--txt)
+          .tab.active — background:var(--panel); color:var(--green); border-color:var(--line)
+        */}
+        <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
+          {TABS.map((t) => (
+            <div
+              key={t.id}
+              onClick={() => goTab(t.id)}
+              style={{
+                padding: "10px 20px",
+                borderRadius: 8,
+                cursor: "pointer",
+                color: tab === t.id ? "var(--green)" : "var(--mut)",
+                fontWeight: 600,
+                border: `1px solid ${tab === t.id ? "var(--line)" : "transparent"}`,
+                background: tab === t.id ? "var(--panel)" : "transparent",
+                transition: ".15s",
+                whiteSpace: "nowrap",
+                fontSize: 14,
+              }}
+              onMouseOver={(e) => {
+                if (tab !== t.id) e.currentTarget.style.color = "var(--txt)";
+              }}
+              onMouseOut={(e) => {
+                if (tab !== t.id) e.currentTarget.style.color = "var(--mut)";
+              }}
+            >
+              {t.label}
+            </div>
+          ))}
+        </div>
+
+        {/* Active view */}
+        <div style={{ animation: "fade .3s" }}>
+          {renderView()}
+        </div>
+      </div>
     </div>
   );
 }

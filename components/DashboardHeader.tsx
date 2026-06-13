@@ -4,7 +4,6 @@ import { useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useDB } from "@/context/DBContext";
-import { loadDB, saveDB } from "@/lib/db";
 
 interface Props {
   userEmail: string;
@@ -85,63 +84,96 @@ export default function DashboardHeader({ userEmail }: Props) {
     e.target.value = "";
   }
 
-  const btnStyle: React.CSSProperties = {
-    background: "var(--panel2)", border: "1px solid var(--line)", borderRadius: 8,
-    color: "var(--txt)", padding: "7px 14px", fontSize: 12, fontWeight: 600,
-    cursor: "pointer", whiteSpace: "nowrap", transition: ".12s",
-  };
-
   return (
-    <div style={{
-      display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "14px 24px", background: "var(--panel)",
-      borderBottom: "1px solid var(--line)", position: "sticky", top: 0, zIndex: 100,
+    // V1: header is NOT sticky — it lives inside .wrap flow
+    // display:flex; align-items:center; justify-content:space-between
+    // margin-bottom:24px; padding-bottom:20px; border-bottom:1px solid var(--line)
+    <header style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 24,
+      paddingBottom: 20,
+      borderBottom: "1px solid var(--line)",
     }}>
-      {/* Brand — matches V1 exactly */}
-      <div style={{ display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}>
+      {/* .brand — cursor:pointer, onclick go('dash') */}
+      <div
+        style={{ display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}
+        onClick={() => router.push("/dashboard")}
+        title="Back to dashboard"
+      >
+        {/* .logo — 46×46, borderRadius:10, boxShadow green glow */}
         <div style={{
           width: 46, height: 46, borderRadius: 10, overflow: "hidden",
+          display: "flex", alignItems: "center", justifyContent: "center",
           boxShadow: "0 4px 18px rgba(38,208,124,.3)", flexShrink: 0,
         }} dangerouslySetInnerHTML={{ __html: LOGO_SVG }} />
         <div>
-          <div style={{ fontSize: 19, fontWeight: 700, letterSpacing: "-0.3px", lineHeight: 1.2 }}>Aye Aye Trader</div>
-          <div style={{ fontSize: 11, color: "var(--mut)", letterSpacing: "1px", textTransform: "uppercase" }}>Process over P&L</div>
+          {/* .brand h1 — font-size:19px; font-weight:700; letter-spacing:-.3px */}
+          <h1 style={{ fontSize: 19, fontWeight: 700, letterSpacing: "-0.3px", lineHeight: 1.2 }}>
+            Aye Aye Trader
+          </h1>
+          {/* .brand p — font-size:11px; color:var(--mut); letter-spacing:1px; text-transform:uppercase */}
+          <p style={{ fontSize: 11, color: "var(--mut)", letterSpacing: "1px", textTransform: "uppercase" }}>
+            Process over P&amp;L
+          </p>
         </div>
       </div>
 
-      {/* Actions — matches V1 */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{
-          ...btnStyle, cursor: "pointer", fontSize: 12, color: "var(--mut)",
-        }}
-          onMouseOver={(e) => { e.currentTarget.style.borderColor = "var(--blue)"; e.currentTarget.style.color = "var(--blue)"; }}
-          onMouseOut={(e) => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.color = "var(--mut)"; }}
+      {/* .actions — display:flex; gap:10px; align-items:center */}
+      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        {/* .dbx-status — V1 exact: cursor:pointer; font-size:12px; font-weight:600; color:var(--mut);
+            padding:9px 14px; border:1px solid var(--line); border-radius:8px; background:var(--panel); */}
+        <span
+          style={{
+            cursor: "pointer", fontSize: 12, fontWeight: 600, color: "var(--mut)",
+            padding: "9px 14px", border: "1px solid var(--line)", borderRadius: 8,
+            background: "var(--panel)", transition: ".15s", whiteSpace: "nowrap",
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.borderColor = "var(--blue)";
+            e.currentTarget.style.color = "var(--blue)";
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.borderColor = "var(--line)";
+            e.currentTarget.style.color = "var(--mut)";
+          }}
+          title="Sync your journal to your own Dropbox"
         >
-          {userEmail}
+          Connect Dropbox
         </span>
 
-        <button style={btnStyle} onClick={doExport}
-          onMouseOver={(e) => { e.currentTarget.style.borderColor = "var(--green)"; }}
-          onMouseOut={(e) => { e.currentTarget.style.borderColor = "var(--line)"; }}
-        >↓ Export</button>
+        {/* .btn */}
+        <button className="btn" onClick={doExport}>↓ Export</button>
 
-        <button style={btnStyle} onClick={() => importRef.current?.click()}
-          onMouseOver={(e) => { e.currentTarget.style.borderColor = "var(--green)"; }}
-          onMouseOut={(e) => { e.currentTarget.style.borderColor = "var(--line)"; }}
-        >↑ Import</button>
+        <button className="btn" onClick={() => importRef.current?.click()}>↑ Import</button>
         <input ref={importRef} type="file" accept=".json" style={{ display: "none" }} onChange={doImport} />
 
-        <button style={{ ...btnStyle, background: "var(--green)", color: "#04140b", borderColor: "var(--green)", fontWeight: 700 }}
-          onMouseOver={(e) => { e.currentTarget.style.background = "#2ee68a"; }}
-          onMouseOut={(e) => { e.currentTarget.style.background = "var(--green)"; }}
+        {/* .btn.primary */}
+        <button
+          className="btn primary"
           onClick={() => router.push("/dashboard?tab=add")}
-        >+ Log Trade</button>
+        >
+          + Log Trade
+        </button>
 
-        <button onClick={signOut} style={{ ...btnStyle, color: "var(--mut)" }}
-          onMouseOver={(e) => { e.currentTarget.style.borderColor = "var(--red)"; e.currentTarget.style.color = "var(--red)"; }}
-          onMouseOut={(e) => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.color = "var(--mut)"; }}
-        >Sign out</button>
+        {/* Sign out — not in V1, kept as utility but styled muted */}
+        <button
+          className="btn"
+          style={{ color: "var(--mut)" }}
+          onClick={signOut}
+          onMouseOver={(e) => {
+            e.currentTarget.style.borderColor = "var(--red)";
+            e.currentTarget.style.color = "var(--red)";
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.borderColor = "var(--line)";
+            e.currentTarget.style.color = "var(--mut)";
+          }}
+        >
+          Sign out
+        </button>
       </div>
-    </div>
+    </header>
   );
 }

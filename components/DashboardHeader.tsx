@@ -9,6 +9,7 @@ interface Props {
   theme: "dark" | "light";
   onToggleTheme: () => void;
   onCsvImport: () => void;
+  onHome: () => void;
 }
 
 const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
@@ -56,7 +57,7 @@ const STATUS_MAP: Record<string, { label: string; color: string; icon: string }>
   error:   { label: "Dropbox: error",    color: "var(--red)",  icon: "☁ " },
 };
 
-export default function DashboardHeader({ userEmail, theme, onToggleTheme, onCsvImport }: Props) {
+export default function DashboardHeader({ userEmail, theme, onToggleTheme, onCsvImport, onHome }: Props) {
   const router   = useRouter();
   const supabase = createClient();
   const { db, save, dbxStatus, dbxConnected, dbxConnect, dbxDisconnect } = useDB();
@@ -97,7 +98,7 @@ export default function DashboardHeader({ userEmail, theme, onToggleTheme, onCsv
       {/* Brand */}
       <div
         style={{ display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}
-        onClick={() => router.push("/dashboard")}
+        onClick={onHome}
         title="Back to dashboard"
       >
         <div style={{

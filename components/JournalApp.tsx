@@ -119,6 +119,7 @@ function JournalShell({ userEmail }: { userEmail: string }) {
           theme={theme}
           onToggleTheme={toggleTheme}
           onCsvImport={goCsv}
+          onHome={() => goTab("dash")}
         />
 
         <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>

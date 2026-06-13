@@ -32,7 +32,12 @@ function SetCard({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function SettingsView() {
+interface SettingsProps {
+  theme?: "dark" | "light";
+  onToggleTheme?: () => void;
+}
+
+export default function SettingsView({ theme = "dark", onToggleTheme }: SettingsProps) {
   const { db, save } = useDB();
   const s = db.settings;
 
@@ -200,6 +205,29 @@ export default function SettingsView() {
           <button className="btn" style={{ background: "var(--green)", color: "#04140b", border: "none", fontWeight: 700 }}
             onClick={saveSettings}>Save changes</button>
         </div>
+      </div>
+
+      {/* ── Appearance ── */}
+      <div style={{ marginBottom: 28 }}>
+        <SectionTitle>Appearance</SectionTitle>
+        <SetCard>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3 }}>Theme</div>
+              <div style={{ fontSize: 12, color: "var(--mut)", lineHeight: 1.6 }}>
+                Switch between dark and light mode. Your preference is saved automatically.
+              </div>
+            </div>
+            <button
+              className="btn"
+              onClick={onToggleTheme}
+              style={{ fontSize: 15, padding: "8px 16px", flexShrink: 0 }}
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark" ? "☀️ Light mode" : "🌙 Dark mode"}
+            </button>
+          </div>
+        </SetCard>
       </div>
 
       {/* ── Trading costs ── */}

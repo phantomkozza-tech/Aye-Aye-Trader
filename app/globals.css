@@ -419,3 +419,102 @@ button, select, input, textarea { font-family: inherit; font-size: 14px; }
 /* ── Strat detail ── */
 .acct-link{color:var(--blue);cursor:pointer;font-weight:600}
 .acct-link:hover{text-decoration:underline}
+
+/* ── Light theme ── */
+html.light {
+  --bg: #f0f2f5;
+  --panel: #ffffff;
+  --panel2: #f5f7fa;
+  --line: #d8dde6;
+  --txt: #0d1117;
+  --mut: #6b7280;
+  --dim: #9ca3af;
+  --green: #16a34a;
+  --green-dim: #dcfce7;
+  --red: #dc2626;
+  --red-dim: #fee2e2;
+  --blue: #2563eb;
+  --gold: #b45309;
+  --accent: #16a34a;
+  --aplus: #16a34a;
+  --a: #2563eb;
+  --b: #b45309;
+}
+
+html.light body {
+  background: var(--bg);
+  color: var(--txt);
+}
+
+html.light body::before {
+  background:
+    radial-gradient(55% 80% at -8% 45%, rgba(22,163,74,.10), transparent 62%),
+    radial-gradient(55% 80% at 108% 55%, rgba(22,163,74,.08), transparent 62%),
+    radial-gradient(90% 45% at 50% -12%, rgba(22,163,74,.05), transparent 58%);
+}
+
+html.light .btn {
+  background: #ffffff;
+  border-color: var(--line);
+  color: var(--txt);
+}
+
+html.light .btn:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+html.light .btn.primary {
+  background: var(--green);
+  color: #ffffff;
+  border-color: var(--green);
+}
+
+html.light .btn.primary:hover {
+  background: #15803d;
+}
+
+html.light .modal-overlay {
+  background: rgba(0,0,0,.35);
+}
+
+html.light .modal {
+  box-shadow: 0 12px 40px rgba(0,0,0,.15);
+}
+
+html.light tr:hover td {
+  background: var(--panel2);
+}
+
+html.light .cal-cell.out {
+  background: repeating-linear-gradient(135deg, rgba(0,0,0,.025) 0 6px, transparent 6px 12px), var(--bg);
+}
+
+html.light .house-board {
+  background: linear-gradient(160deg, rgba(220,38,38,.08), var(--panel));
+}
+
+html.light .house-board.up {
+  background: linear-gradient(160deg, rgba(22,163,74,.08), var(--panel));
+}
+
+html.light .m-banner.dev   { background: linear-gradient(160deg, rgba(180,83,9,.08),  var(--panel)); }
+html.light .m-banner.master{ background: linear-gradient(160deg, rgba(22,163,74,.08), var(--panel)); }
+html.light .m-banner.noedge{ background: linear-gradient(160deg, rgba(220,38,38,.08), var(--panel)); }
+html.light .survey-card    { background: linear-gradient(160deg, rgba(37,99,235,.08), var(--panel)); }
+html.light .hop-banner     { background: linear-gradient(160deg, rgba(180,83,9,.08),  var(--panel)); }
+
+html.light .chip.on {
+  background: rgba(22,163,74,.12);
+  color: var(--green);
+  border-color: var(--green);
+}
+
+html.light .reptab.on {
+  background: var(--panel2);
+  color: var(--txt);
+}
+
+html.light .scard:hover {
+  border-color: var(--green);
+}

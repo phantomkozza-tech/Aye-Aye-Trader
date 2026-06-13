@@ -1,12 +1,14 @@
 "use client";
 
-import { useRef } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { useDB } from "@/context/DBContext";
 
 interface Props {
   userEmail: string;
+  theme: "dark" | "light";
+  onToggleTheme: () => void;
+  onCsvImport: () => void;
 }
 
 const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
@@ -44,11 +46,23 @@ const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" 
   </g>
 </svg>`;
 
-export default function DashboardHeader({ userEmail }: Props) {
-  const router = useRouter();
+// V1 status label + color map
+const STATUS_MAP: Record<string, { label: string; color: string; icon: string }> = {
+  off:     { label: "Connect Dropbox", color: "var(--mut)",   icon: "" },
+  loading: { label: "Dropbox: loading…", color: "var(--gold)", icon: "☁ " },
+  saved:   { label: "Dropbox: synced",   color: "var(--green)", icon: "☁ " },
+  saving:  { label: "Dropbox: saving…",  color: "var(--gold)", icon: "☁ " },
+  dirty:   { label: "Dropbox: pending…", color: "var(--gold)", icon: "☁ " },
+  error:   { label: "Dropbox: error",    color: "var(--red)",  icon: "☁ " },
+};
+
+export default function DashboardHeader({ userEmail, theme, onToggleTheme, onCsvImport }: Props) {
+  const router   = useRouter();
   const supabase = createClient();
-  const { db, save } = useDB();
-  const importRef = useRef<HTMLInputElement>(null);
+  const { db, save, dbxStatus, dbxConnected, dbxConnect, dbxDisconnect } = useDB();
+
+  const isDark = theme === "dark";
+  const s = STATUS_MAP[dbxStatus] ?? STATUS_MAP.off;
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -64,112 +78,98 @@ export default function DashboardHeader({ userEmail }: Props) {
     a.click();
   }
 
-  function doImport(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0]; if (!f) return;
-    const r = new FileReader();
-    r.onload = () => {
-      try {
-        const d = JSON.parse(r.result as string);
-        if (d?.accounts && d?.trades) {
-          if (confirm(`Import ${d.trades.length} trades & ${d.accounts.length} accounts? Replaces current data.`)) {
-            save(d);
-            router.refresh();
-          }
-        } else {
-          alert("Unrecognized file format.");
-        }
-      } catch { alert("Invalid file"); }
-    };
-    r.readAsText(f);
-    e.target.value = "";
+  function dbxButton() {
+    if (dbxConnected) {
+      if (confirm("Disconnect Dropbox?\n\nYour journal stays safe in your Dropbox and in this browser. You can reconnect anytime.")) {
+        dbxDisconnect();
+      }
+    } else {
+      dbxConnect();
+    }
   }
 
   return (
-    // V1: header is NOT sticky — it lives inside .wrap flow
-    // display:flex; align-items:center; justify-content:space-between
-    // margin-bottom:24px; padding-bottom:20px; border-bottom:1px solid var(--line)
     <header style={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: 24,
-      paddingBottom: 20,
-      borderBottom: "1px solid var(--line)",
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      marginBottom: 24, paddingBottom: 20, borderBottom: "1px solid var(--line)",
+      flexWrap: "wrap", gap: 12,
     }}>
-      {/* .brand — cursor:pointer, onclick go('dash') */}
+      {/* Brand */}
       <div
         style={{ display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}
         onClick={() => router.push("/dashboard")}
         title="Back to dashboard"
       >
-        {/* .logo — 46×46, borderRadius:10, boxShadow green glow */}
         <div style={{
           width: 46, height: 46, borderRadius: 10, overflow: "hidden",
           display: "flex", alignItems: "center", justifyContent: "center",
           boxShadow: "0 4px 18px rgba(38,208,124,.3)", flexShrink: 0,
         }} dangerouslySetInnerHTML={{ __html: LOGO_SVG }} />
         <div>
-          {/* .brand h1 — font-size:19px; font-weight:700; letter-spacing:-.3px */}
           <h1 style={{ fontSize: 19, fontWeight: 700, letterSpacing: "-0.3px", lineHeight: 1.2 }}>
             Aye Aye Trader
           </h1>
-          {/* .brand p — font-size:11px; color:var(--mut); letter-spacing:1px; text-transform:uppercase */}
           <p style={{ fontSize: 11, color: "var(--mut)", letterSpacing: "1px", textTransform: "uppercase" }}>
             Process over P&amp;L
           </p>
         </div>
       </div>
 
-      {/* .actions — display:flex; gap:10px; align-items:center */}
-      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-        {/* .dbx-status — V1 exact: cursor:pointer; font-size:12px; font-weight:600; color:var(--mut);
-            padding:9px 14px; border:1px solid var(--line); border-radius:8px; background:var(--panel); */}
+      {/* Actions */}
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+
+        {/* Dropbox status button — exact V1 behaviour */}
         <span
+          onClick={dbxButton}
+          title="Sync your journal to your own Dropbox"
           style={{
-            cursor: "pointer", fontSize: 12, fontWeight: 600, color: "var(--mut)",
-            padding: "9px 14px", border: "1px solid var(--line)", borderRadius: 8,
+            cursor: "pointer", fontSize: 12, fontWeight: 600,
+            color: s.color, padding: "9px 14px",
+            border: "1px solid var(--line)", borderRadius: 8,
             background: "var(--panel)", transition: ".15s", whiteSpace: "nowrap",
           }}
           onMouseOver={(e) => {
             e.currentTarget.style.borderColor = "var(--blue)";
-            e.currentTarget.style.color = "var(--blue)";
+            if (dbxStatus === "off") e.currentTarget.style.color = "var(--blue)";
           }}
           onMouseOut={(e) => {
             e.currentTarget.style.borderColor = "var(--line)";
-            e.currentTarget.style.color = "var(--mut)";
+            e.currentTarget.style.color = s.color;
           }}
-          title="Sync your journal to your own Dropbox"
         >
-          Connect Dropbox
+          {s.icon}{s.label}
         </span>
 
-        {/* .btn */}
+        {/* Theme toggle */}
+        <button
+          className="btn"
+          onClick={onToggleTheme}
+          title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+          style={{ fontSize: 15, padding: "8px 12px" }}
+        >
+          {isDark ? "☀️" : "🌙"}
+        </button>
+
+        {/* Export JSON */}
         <button className="btn" onClick={doExport}>↓ Export</button>
 
-        <button className="btn" onClick={() => importRef.current?.click()}>↑ Import</button>
-        <input ref={importRef} type="file" accept=".json" style={{ display: "none" }} onChange={doImport} />
+        {/* Import CSV shortcut */}
+        <button className="btn" onClick={onCsvImport} title="Import trades from CSV">
+          ↑ Import CSV
+        </button>
 
-        {/* .btn.primary */}
-        <button
-          className="btn primary"
-          onClick={() => router.push("/dashboard?tab=add")}
-        >
+        {/* Log Trade */}
+        <button className="btn primary" onClick={() => router.push("/dashboard?tab=add")}>
           + Log Trade
         </button>
 
-        {/* Sign out — not in V1, kept as utility but styled muted */}
+        {/* Sign out */}
         <button
           className="btn"
           style={{ color: "var(--mut)" }}
           onClick={signOut}
-          onMouseOver={(e) => {
-            e.currentTarget.style.borderColor = "var(--red)";
-            e.currentTarget.style.color = "var(--red)";
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.borderColor = "var(--line)";
-            e.currentTarget.style.color = "var(--mut)";
-          }}
+          onMouseOver={(e) => { e.currentTarget.style.borderColor = "var(--red)"; e.currentTarget.style.color = "var(--red)"; }}
+          onMouseOut={(e)  => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.color = "var(--mut)"; }}
         >
           Sign out
         </button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DBProvider } from "@/context/DBContext";
 import DashView from "@/components/dashboard/DashView";
 import AddTradeView from "@/components/add-trade/AddTradeView";
@@ -29,38 +29,49 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "settings", label: "⚙" },
 ];
 
-function ComingSoon({ label }: { label: string }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      minHeight: 400, gap: 12, color: "var(--mut)" }}>
-      <div style={{ fontSize: 36 }}>⚓</div>
-      <div style={{ fontSize: 15, fontWeight: 700, color: "var(--txt)" }}>{label}</div>
-      <div style={{ fontSize: 12 }}>Under construction — coming soon</div>
-    </div>
-  );
-}
+const THEME_KEY = "ayeaye_theme";
 
 function JournalShell({ userEmail }: { userEmail: string }) {
   const [tab, setTab] = useState<TabId>("dash");
   const [dayDetail, setDayDetail] = useState<string | null>(null);
   const [csvMode, setCsvMode] = useState(false);
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
 
-  // Dash filter state — shared with DayDetailView so it inherits the same account/date filter
+  // Dash filter state — shared with DayDetailView
   const [dashSelAccts, setDashSelAccts] = useState<Set<string>>(new Set());
   const [dashShowBlown, setDashShowBlown] = useState(false);
   const [dashFrom, setDashFrom] = useState("");
   const [dashTo, setDashTo] = useState("");
 
+  // Load persisted theme on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(THEME_KEY) as "dark" | "light" | null;
+    const t = saved ?? "dark";
+    setTheme(t);
+    applyTheme(t);
+  }, []);
+
+  function applyTheme(t: "dark" | "light") {
+    document.documentElement.classList.toggle("light", t === "light");
+  }
+
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    applyTheme(next);
+    localStorage.setItem(THEME_KEY, next);
+  }
+
   const goTab = (t: TabId) => { setTab(t); setDayDetail(null); setCsvMode(false); };
+  const goCsv = () => { setDayDetail(null); setCsvMode(true); };
 
   const renderView = () => {
-    // Day detail — shown over Dashboard
     if (dayDetail) {
       return (
         <DayDetailView
           date={dayDetail}
           onBack={() => setDayDetail(null)}
-          onTradeClick={() => { /* TODO: open trade detail */ }}
+          onTradeClick={() => {}}
           selAccts={dashSelAccts}
           showBlown={dashShowBlown}
           from={dashFrom}
@@ -69,7 +80,6 @@ function JournalShell({ userEmail }: { userEmail: string }) {
       );
     }
 
-    // CSV import — launched from Add Trade tab
     if (csvMode) {
       return <CsvImportView onDone={() => { setCsvMode(false); goTab("log"); }} />;
     }
@@ -92,24 +102,25 @@ function JournalShell({ userEmail }: { userEmail: string }) {
       case "log":      return <TradeLogView onEditTrade={() => goTab("add")} />;
       case "add":      return <AddTradeView onDone={() => goTab("dash")} onCsvImport={() => setCsvMode(true)} />;
       case "accts":    return <AccountsView />;
-      case "settings": return <SettingsView />;
+      case "settings": return <SettingsView theme={theme} onToggleTheme={toggleTheme} />;
       case "blown":    return <BlownView />;
       case "strats":   return <StrategiesView />;
       case "notes":    return <NotesView />;
       case "report":   return <ReportView />;
-      default:         return <ComingSoon label={TABS.find((t) => t.id === tab)?.label ?? tab} />;
+      default:         return null;
     }
   };
 
   return (
     <div style={{ minHeight: "100vh", position: "relative", zIndex: 1 }}>
       <div className="wrap">
-        <DashboardHeader userEmail={userEmail} />
+        <DashboardHeader
+          userEmail={userEmail}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          onCsvImport={goCsv}
+        />
 
-        {/*
-          V1 .tabs — display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap
-          Left-aligned, no background, no sticky.
-        */}
         <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
           {TABS.map((t) => (
             <div
@@ -139,7 +150,6 @@ function JournalShell({ userEmail }: { userEmail: string }) {
           ))}
         </div>
 
-        {/* Active view */}
         <div style={{ animation: "fade .3s" }}>
           {renderView()}
         </div>

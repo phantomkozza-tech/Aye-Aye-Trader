@@ -276,3 +276,146 @@ button, select, input, textarea { font-family: inherit; font-size: 14px; }
 .rev-block .rb-head h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--mut); }
 .rev-edit { font-size: 11px; color: var(--blue); cursor: pointer; }
 .rev-edit:hover { text-decoration: underline; }
+
+/* ── Report: insight cards ── */
+.ins-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:14px}
+.ins-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.ins-card .il{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
+.ins-card .iv{font-size:22px;font-weight:800;line-height:1.1}
+.ins-card .is{font-size:12px;color:var(--mut);margin-top:4px}
+
+/* ── Report: diagnostics ── */
+.diag{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px}
+.diag.alert{border-color:#6e2531}
+.diag.good{border-color:#1c6b48}
+.diag-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--mut);margin-bottom:8px}
+.diag-head{font-size:16px;font-weight:700;line-height:1.45;margin-bottom:14px}
+.diag-head b{font-weight:800}
+.hi-g{color:var(--green)}.hi-r{color:var(--red)}.hi-gold{color:var(--gold)}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cmp-col{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px}
+.cmp-col.win{border-color:rgba(38,208,124,.4)}
+.cmp-col.lose{border-color:rgba(240,85,109,.4)}
+.cmp-col h5{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);margin:0 0 10px}
+.cmp-big{font-size:26px;font-weight:800;line-height:1}
+.cmp-row{display:flex;justify-content:space-between;font-size:12px;margin-top:8px}
+.cmp-row span:first-child{color:var(--mut)}
+.diag-stats{display:flex;gap:26px;flex-wrap:wrap}
+.diag-stats .ds-l{color:var(--mut);font-size:10.5px;text-transform:uppercase;letter-spacing:.5px}
+.diag-stats b{font-size:19px;font-weight:800;display:block;margin-top:3px}
+.diag-empty{padding:24px;background:var(--panel);border:1px solid var(--line);border-radius:12px;line-height:1.6}
+
+/* ── Report: setup cards ── */
+.setup-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-bottom:14px}
+.setup-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.setup-card .sc-name{font-size:14px;font-weight:800}
+.setup-card .sc-net{font-size:22px;font-weight:800;line-height:1.25;margin-top:4px}
+.setup-card .sc-meta{font-size:12px;color:var(--mut);margin-top:2px}
+.setup-card .sc-split{font-size:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);line-height:1.6}
+
+/* ── Report: sub-nav ── */
+.repnav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.repnav-tabs{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:3px}
+.reptab{background:transparent;border:0;color:var(--mut);font:inherit;font-size:13px;font-weight:600;padding:7px 16px;border-radius:8px;cursor:pointer;transition:.12s}
+.reptab.on{background:var(--panel2);color:var(--txt)}
+.reptab:hover{color:var(--txt)}
+
+/* ── Trading System ── */
+.sys-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.scard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;cursor:pointer;transition:.15s}
+.scard:hover{border-color:var(--green);transform:translateY(-2px)}
+.scard .sh{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px}
+.scard .sh h4{font-size:16px;font-weight:800}
+.scard .snet{font-size:24px;font-weight:800;letter-spacing:-.5px;margin:8px 0 2px}
+.scard .smeta{font-size:12px;color:var(--mut)}
+.scard .strust{margin-top:14px;padding-top:12px;border-top:1px solid var(--panel2);font-size:12px;display:flex;justify-content:space-between}
+.trust-pill{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 9px;border-radius:11px;white-space:nowrap}
+.sd-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
+.sd-stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.sd-stat .l{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px}
+.sd-stat .v{font-size:21px;font-weight:800;letter-spacing:-.4px;line-height:1.1}
+.sd-stat .s{font-size:12px;color:var(--mut);margin-top:4px}
+.sd-section{margin:22px 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--mut);font-weight:700}
+
+/* ── Mastery / survey / coach ── */
+.mchip{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 9px;border-radius:11px;white-space:nowrap}
+.m-dev{background:rgba(212,169,72,.16);color:var(--gold)}
+.m-master{background:rgba(38,208,124,.16);color:var(--green)}
+.m-noedge{background:rgba(240,85,109,.16);color:var(--red)}
+.m-prog{height:5px;border-radius:3px;background:var(--panel2);overflow:hidden;margin-top:10px}
+.m-prog i{display:block;height:100%;background:var(--gold);border-radius:3px}
+.coach-strip{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:var(--mut);display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center}
+.coach-strip b{color:var(--txt);font-weight:700}
+.survey-card{background:linear-gradient(160deg,rgba(59,130,196,.10),var(--panel));border:1px solid #2f5d8a;border-radius:12px;padding:16px;margin-bottom:14px}
+.survey-card .sv-h{font-size:13px;font-weight:800;margin-bottom:4px}
+.survey-card .sv-d{font-size:12px;color:var(--mut);margin-bottom:12px}
+.survey-card label{display:block;font-size:12.5px;margin-bottom:10px}
+.survey-card select{margin-left:8px;background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:6px 10px;border-radius:7px;font-size:12.5px}
+.hop-banner{background:linear-gradient(160deg,rgba(212,169,72,.12),var(--panel));border:1px solid #6e5a25;border-radius:12px;padding:16px;margin-bottom:16px;font-size:14px;font-weight:600;line-height:1.5}
+.m-banner{border-radius:12px;padding:16px;margin-bottom:16px;font-size:14px;line-height:1.55}
+.m-banner.dev{background:linear-gradient(160deg,rgba(212,169,72,.10),var(--panel));border:1px solid #6e5a25}
+.m-banner.master{background:linear-gradient(160deg,rgba(38,208,124,.10),var(--panel));border:1px solid #1c6b48}
+.m-banner.noedge{background:linear-gradient(160deg,rgba(240,85,109,.12),var(--panel));border:1px solid #6e2531}
+.m-override{margin-top:10px;font-size:12px;color:var(--mut)}
+.m-override select{margin-left:6px;background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:5px 9px;border-radius:7px;font-size:12px}
+
+/* ── Eval Gauntlet ── */
+.gpanel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:16px}
+.gpanel.tilt{border-color:#6e2531}
+.ghdr{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.ghdr h3{font-size:16px;font-weight:800}
+.gcall{font-size:15px;font-weight:600;line-height:1.55;margin:8px 0 30px}
+.road{position:relative;height:14px;border-radius:8px;background:linear-gradient(90deg,#f0556d,#e8a13a 48%,#26d07c);margin:38px 0 8px}
+.road-mark{position:absolute;top:50%;width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid var(--panel);transform:translate(-50%,-50%);box-shadow:0 0 0 2px rgba(0,0,0,.4)}
+.road-cur{position:absolute;top:-28px;transform:translateX(-50%);font-size:12px;font-weight:800;white-space:nowrap;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:3px 8px}
+.road-ends{display:flex;justify-content:space-between;font-size:11px;font-weight:700;margin-top:8px}
+.gstat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:20px}
+.gstat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px}
+.gstat .l{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.gstat .v{font-size:20px;font-weight:800;line-height:1.05}
+.gstat .s{font-size:11px;color:var(--mut);margin-top:4px;line-height:1.4}
+.gstat .odds-big{font-size:36px;font-weight:800;letter-spacing:-1.5px}
+
+/* ── House Scoreboard ── */
+.house-board{border-radius:14px;padding:20px;margin-bottom:18px;background:linear-gradient(160deg,rgba(240,85,109,.12),var(--panel));border:1px solid #6e2531}
+.house-board.up{background:linear-gradient(160deg,rgba(38,208,124,.12),var(--panel));border-color:#1c6b48}
+.hb-top{display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--mut);margin-bottom:14px}
+.hb-row{display:flex;flex-wrap:wrap;gap:30px;align-items:flex-end}
+.hb-stat .hl{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.hb-stat .hv{font-size:30px;font-weight:800;line-height:1}
+.hb-rec b{font-size:30px;font-weight:800}
+.hb-quip{font-size:13.5px;font-weight:600;margin-top:16px;line-height:1.5}
+
+/* ── Psychology ── */
+.psy-table{width:100%;border-collapse:collapse;margin-top:4px}
+.psy-table th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);padding:8px 10px;border-bottom:1px solid var(--line)}
+.psy-table td{padding:11px 10px;border-bottom:1px solid var(--panel2);font-size:13px}
+.psy-table tr:last-child td{border-bottom:0}
+.psy-name{font-weight:800}
+.psy-bar{height:6px;border-radius:4px;background:var(--panel2);overflow:hidden;margin-top:5px;max-width:120px}
+.psy-bar i{display:block;height:100%;border-radius:4px}
+.lie{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--red);border-radius:8px;padding:13px 15px;margin-bottom:10px}
+.lie .when{font-size:12px;color:var(--mut)}
+.lie .said{font-size:14px;font-weight:700;margin-top:3px}
+.lie .truth{font-size:12.5px;color:var(--mut);margin-top:5px;line-height:1.45}
+
+/* ── Roadmap ── */
+.rm-panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:18px}
+.rm-head{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.rm-head h3{font-size:17px;font-weight:800;margin:0}
+.rm-bal{font-size:13px;color:var(--mut);margin-bottom:16px}
+.rm-miles{display:flex;gap:10px;flex-wrap:wrap}
+.rm-mile{flex:1;min-width:88px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer;text-align:center;color:var(--txt);transition:.15s}
+.rm-mile:hover{border-color:var(--mut)}
+.rm-mile.on{border-color:var(--green);background:rgba(38,208,124,.10)}
+.rm-mile .rp{font-size:13px;font-weight:800;color:var(--green)}
+.rm-mile .ra{font-size:12.5px;color:var(--mut);margin-top:2px}
+.rm-hint{font-size:11.5px;color:var(--dim);margin-top:8px}
+.rm-prog{height:10px;border-radius:6px;background:var(--panel2);overflow:hidden;margin:14px 0 6px;border:1px solid var(--line)}
+.rm-prog i{display:block;height:100%;background:linear-gradient(90deg,#3b82c4,#26d07c);border-radius:6px}
+.rm-sec{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:13px;line-height:1.6}
+.rm-sec .rl{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);font-weight:700;margin-bottom:6px}
+
+/* ── Strat detail ── */
+.acct-link{color:var(--blue);cursor:pointer;font-weight:600}
+.acct-link:hover{text-decoration:underline}

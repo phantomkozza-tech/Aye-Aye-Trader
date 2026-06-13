@@ -13,6 +13,7 @@ import TradeLogView from "@/components/trade-log/TradeLogView";
 import NotesView from "@/components/notes/NotesView";
 import DayDetailView from "@/components/day-detail/DayDetailView";
 import CsvImportView from "@/components/csv-import/CsvImportView";
+import ReportView from "@/components/report/ReportView";
 
 type TabId = "dash" | "log" | "accts" | "blown" | "strats" | "report" | "notes" | "add" | "settings";
 
@@ -95,6 +96,7 @@ function JournalShell({ userEmail }: { userEmail: string }) {
       case "blown":    return <BlownView />;
       case "strats":   return <StrategiesView />;
       case "notes":    return <NotesView />;
+      case "report":   return <ReportView />;
       default:         return <ComingSoon label={TABS.find((t) => t.id === tab)?.label ?? tab} />;
     }
   };

@@ -253,14 +253,14 @@ function NoteEditorPanel({
       )}
 
       {/* Editor */}
-      <div style={{ flex: 1, border: "1px solid var(--line)", borderRadius: 10, overflow: "hidden", background: "var(--panel2)", minHeight: 380 }}>
+      <div style={{ flex: 1, border: "1px solid var(--line)", borderRadius: 10, overflow: "hidden", background: "var(--panel2)", minHeight: 1122 }}>
         <div style={{ padding: "6px 16px", borderBottom: "1px solid var(--line)", fontSize: 11, color: "var(--dim)", display: "flex", gap: 16, alignItems: "center" }}>
           <span>Type <kbd style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 4, padding: "1px 5px", fontSize: 10 }}>/</kbd> for blocks</span>
           <span>Select text to format</span>
           <span style={{ marginLeft: "auto", color: dirty ? "var(--gold)" : "var(--dim)" }}>{dirty ? "● Unsaved" : "Saved"}</span>
         </div>
-        <BlockNoteView editor={editor} theme={DARK_THEME as any} sideMenu={false} style={{ minHeight: 340, padding: "4px 0", display: mounted ? undefined : "none" }} />
-        {!mounted && <div style={{ minHeight: 340, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--dim)", fontSize: 13 }}>Loading editor…</div>}
+        <BlockNoteView editor={editor} theme={DARK_THEME as any} sideMenu={false} style={{ minHeight: 1080, padding: "12px 0", display: mounted ? undefined : "none" }} />
+        {!mounted && <div style={{ minHeight: 1080, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--dim)", fontSize: 13 }}>Loading editor…</div>}
       </div>
     </div>
   );
@@ -343,16 +343,16 @@ function TemplateEditorPanel({
       </div>
 
       {/* Editor — read-only feel for built-ins but still interactive */}
-      <div style={{ flex: 1, border: "1px solid var(--line)", borderRadius: 10, overflow: "hidden", background: "var(--panel2)", minHeight: 380 }}>
+      <div style={{ flex: 1, border: "1px solid var(--line)", borderRadius: 10, overflow: "hidden", background: "var(--panel2)", minHeight: 1122 }}>
         <div style={{ padding: "6px 16px", borderBottom: "1px solid var(--line)", fontSize: 11, color: "var(--dim)", display: "flex", gap: 16, alignItems: "center" }}>
           {isBuiltIn
             ? <span>Built-in preset — click <b style={{ color: "var(--green)" }}>✦ Use template</b> to stamp it into a new planning day</span>
             : <><span>Type <kbd style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 4, padding: "1px 5px", fontSize: 10 }}>/</kbd> for blocks</span><span style={{ marginLeft: "auto", color: dirty ? "var(--gold)" : "var(--dim)" }}>{dirty ? "● Unsaved" : "Saved"}</span></>
           }
         </div>
-        <BlockNoteView editor={editor} theme={DARK_THEME as any} sideMenu={false} style={{ minHeight: 340, padding: "4px 0", display: mounted ? undefined : "none" }}
+        <BlockNoteView editor={editor} theme={DARK_THEME as any} sideMenu={false} style={{ minHeight: 1080, padding: "12px 0", display: mounted ? undefined : "none" }}
           editable={!isBuiltIn} />
-        {!mounted && <div style={{ minHeight: 340, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--dim)", fontSize: 13 }}>Loading editor…</div>}
+        {!mounted && <div style={{ minHeight: 1080, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--dim)", fontSize: 13 }}>Loading editor…</div>}
       </div>
     </div>
   );
@@ -644,7 +644,7 @@ export default function NotesView() {
           </div>
 
           {/* List */}
-          <div style={{ padding: "4px 8px 8px", maxHeight: "calc(100vh - 280px)", overflowY: "auto" }}>
+          <div style={{ padding: "4px 8px 8px", maxHeight: "calc(100vh - 120px)", overflowY: "auto" }}>
             {mainTab === "notes" ? (
               filteredNotes.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "24px 8px", color: "var(--dim)", fontSize: 12 }}>
@@ -685,7 +685,7 @@ export default function NotesView() {
         </div>
 
         {/* ── Right panel ── */}
-        <div style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 12, padding: 22, minHeight: 520 }}>
+        <div style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 12, padding: 22, minHeight: 1200 }}>
           {mainTab === "notes" ? (
             activeNote ? (
               <NoteEditorPanel

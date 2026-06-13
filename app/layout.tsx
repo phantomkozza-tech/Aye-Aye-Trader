@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "@blocknote/react/style.css";
+import "@blocknote/mantine/style.css";
 
 export const metadata: Metadata = {
   title: "Aye Aye Trader — Journal",

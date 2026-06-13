@@ -3,8 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
-import "@blocknote/react/style.css";
-import "@blocknote/mantine/style.css";
 import { useDB } from "@/context/DBContext";
 import { uid, today } from "@/lib/db";
 import { BUILTIN_TEMPLATES } from "@/lib/noteTemplates";

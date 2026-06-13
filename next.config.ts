@@ -7,6 +7,13 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  transpilePackages: [
+    "@blocknote/core",
+    "@blocknote/react",
+    "@blocknote/mantine",
+    "@mantine/core",
+    "@mantine/hooks",
+  ],
 };
 
 export default nextConfig;

@@ -147,15 +147,30 @@ function Calendar({ db, selAccts, showBlown, from, to, onDayClick }: {
 }
 
 // ── Main DashView ────────────────────────────────────────────
-export default function DashView({ onDayClick }: { onDayClick?: (date: string) => void }) {
+interface DashViewProps {
+  onDayClick?: (date: string) => void;
+  // Lifted filter state — shared with DayDetailView
+  selAccts: Set<string>;
+  setSelAccts: (v: Set<string>) => void;
+  showBlown: boolean;
+  setShowBlown: (v: boolean) => void;
+  from: string;
+  setFrom: (v: string) => void;
+  to: string;
+  setTo: (v: string) => void;
+}
+
+export default function DashView({
+  onDayClick,
+  selAccts, setSelAccts,
+  showBlown, setShowBlown,
+  from, setFrom,
+  to, setTo,
+}: DashViewProps) {
   const { db } = useDB();
   const chartReady = useChartJS();
 
-  const [selAccts, setSelAccts] = useState<Set<string>>(new Set());
-  const [showBlown, setShowBlown] = useState(false);
   const [chipsOpen, setChipsOpen] = useState(false);
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
 
   const allow = new Set(
     db.accounts.filter((a) => showBlown || a.status !== "blown").map((a) => a.id)
@@ -164,11 +179,9 @@ export default function DashView({ onDayClick }: { onDayClick?: (date: string) =
   const stats = calcDashStats(db, trades, allow, from, to);
 
   const toggleAcct = (id: string) => {
-    setSelAccts((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+    const next = new Set(selAccts);
+    next.has(id) ? next.delete(id) : next.add(id);
+    setSelAccts(next);
   };
 
   const acctLabel = selAccts.size === 0

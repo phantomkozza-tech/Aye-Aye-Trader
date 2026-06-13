@@ -67,7 +67,7 @@ function StepPills({ step }: { step: number }) {
 }
 
 // ── Main component ───────────────────────────────────────────
-export default function AddTradeView({ onDone }: { onDone: () => void }) {
+export default function AddTradeView({ onDone, onCsvImport }: { onDone: () => void; onCsvImport?: () => void }) {
   const { db, save } = useDB();
 
   const [step, setStep] = useState(0);
@@ -254,7 +254,7 @@ export default function AddTradeView({ onDone }: { onDone: () => void }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, maxWidth: 500 }}>
         {[
           { icon: "✍️", title: "Manual entry", sub: "Enter the trade by hand, step by step.", action: () => setStep(1) },
-          { icon: "📄", title: "CSV import", sub: "Import from TopstepX, Quantower, Motivewave or Sierra Chart.", action: () => alert("CSV import coming soon") },
+          { icon: "📄", title: "CSV import", sub: "Import from TopstepX, Quantower, Motivewave or Sierra Chart.", action: () => onCsvImport?.() },
         ].map((c) => (
           <div key={c.title} onClick={c.action} style={{
             background: "var(--panel2)", border: "1px solid var(--line)", borderRadius: 12,

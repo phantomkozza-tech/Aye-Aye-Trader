@@ -10,6 +10,9 @@ import BlownView from "@/components/blown/BlownView";
 import StrategiesView from "@/components/strategies/StrategiesView";
 import DashboardHeader from "@/components/DashboardHeader";
 import TradeLogView from "@/components/trade-log/TradeLogView";
+import NotesView from "@/components/notes/NotesView";
+import DayDetailView from "@/components/day-detail/DayDetailView";
+import CsvImportView from "@/components/csv-import/CsvImportView";
 
 type TabId = "dash" | "log" | "accts" | "blown" | "strats" | "report" | "notes" | "add" | "settings";
 
@@ -39,55 +42,71 @@ function ComingSoon({ label }: { label: string }) {
 function JournalShell({ userEmail }: { userEmail: string }) {
   const [tab, setTab] = useState<TabId>("dash");
   const [dayDetail, setDayDetail] = useState<string | null>(null);
+  const [csvMode, setCsvMode] = useState(false);
 
-  const goTab = (t: TabId) => { setTab(t); setDayDetail(null); };
+  // Dash filter state — shared with DayDetailView so it inherits the same account/date filter
+  const [dashSelAccts, setDashSelAccts] = useState<Set<string>>(new Set());
+  const [dashShowBlown, setDashShowBlown] = useState(false);
+  const [dashFrom, setDashFrom] = useState("");
+  const [dashTo, setDashTo] = useState("");
+
+  const goTab = (t: TabId) => { setTab(t); setDayDetail(null); setCsvMode(false); };
 
   const renderView = () => {
+    // Day detail — shown over Dashboard
     if (dayDetail) {
       return (
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
-            <button className="btn" onClick={() => setDayDetail(null)}>←</button>
-            <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>
-              {new Date(dayDetail + "T12:00").toLocaleDateString(undefined, {
-                weekday: "long", month: "long", day: "numeric", year: "numeric",
-              })}
-            </h2>
-          </div>
-          <div style={{ color: "var(--mut)", fontSize: 13 }}>Day detail — coming soon</div>
-        </div>
+        <DayDetailView
+          date={dayDetail}
+          onBack={() => setDayDetail(null)}
+          onTradeClick={() => { /* TODO: open trade detail */ }}
+          selAccts={dashSelAccts}
+          showBlown={dashShowBlown}
+          from={dashFrom}
+          to={dashTo}
+        />
       );
     }
 
+    // CSV import — launched from Add Trade tab
+    if (csvMode) {
+      return <CsvImportView onDone={() => { setCsvMode(false); goTab("log"); }} />;
+    }
+
     switch (tab) {
-      case "dash":     return <DashView onDayClick={(d) => setDayDetail(d)} />;
+      case "dash":
+        return (
+          <DashView
+            onDayClick={(d) => setDayDetail(d)}
+            selAccts={dashSelAccts}
+            setSelAccts={setDashSelAccts}
+            showBlown={dashShowBlown}
+            setShowBlown={setDashShowBlown}
+            from={dashFrom}
+            setFrom={setDashFrom}
+            to={dashTo}
+            setTo={setDashTo}
+          />
+        );
       case "log":      return <TradeLogView onEditTrade={() => goTab("add")} />;
-      case "add":      return <AddTradeView onDone={() => goTab("dash")} />;
+      case "add":      return <AddTradeView onDone={() => goTab("dash")} onCsvImport={() => setCsvMode(true)} />;
       case "accts":    return <AccountsView />;
       case "settings": return <SettingsView />;
       case "blown":    return <BlownView />;
       case "strats":   return <StrategiesView />;
+      case "notes":    return <NotesView />;
       default:         return <ComingSoon label={TABS.find((t) => t.id === tab)?.label ?? tab} />;
     }
   };
 
   return (
-    // body::before glow is on <body> via globals.css; this div provides z-index:1 above it
     <div style={{ minHeight: "100vh", position: "relative", zIndex: 1 }}>
-      {/*
-        V1 .wrap — max-width:1280px; margin:0 auto; padding:24px
-        Header + tabs + views all live inside this container.
-      */}
       <div className="wrap">
         <DashboardHeader userEmail={userEmail} />
 
         {/*
           V1 .tabs — display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap
           Left-aligned, no background, no sticky.
-          .tab — padding:10px 20px; border-radius:8px; cursor:pointer; color:var(--mut);
-                 font-weight:600; border:1px solid transparent; transition:.15s
-          .tab:hover — color:var(--txt)
-          .tab.active — background:var(--panel); color:var(--green); border-color:var(--line)
         */}
         <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
           {TABS.map((t) => (

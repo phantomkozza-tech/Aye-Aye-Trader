@@ -136,14 +136,31 @@ function RichEditor({
   initialBlocks?: any[];
   onChange?: () => void;
 }) {
+  const [mounted, setMounted] = useState(false);
   const editor = useCreateBlockNote({ initialContent: initialBlocks });
+
+  // Wait for full client mount before rendering BlockNoteView.
+  // editor.portalElement is only set after the DOM is ready — rendering
+  // BlockNoteView before that throws "Portal element not found".
+  useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
     if (onChange) return editor.onChange(() => onChange());
   }, [editor, onChange]);
+
+  if (!mounted) {
+    return (
+      <div style={{ minHeight: 340, display: "flex", alignItems: "center",
+        justifyContent: "center", color: "var(--dim)", fontSize: 13 }}>
+        Loading editor…
+      </div>
+    );
+  }
+
   return (
     <BlockNoteView
       editor={editor}
       theme={DARK_THEME as any}
+      sideMenu={false}
       style={{ minHeight: 340, padding: "4px 0" }}
     />
   );
@@ -173,8 +190,8 @@ function NoteEditorPanel({
       : undefined;
 
   const editor = useCreateBlockNote({ initialContent: initialBlocks });
-
-  useEffect(() => editor.onChange(() => setDirty(true)), [editor]);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
     setTitle(note.title ?? ""); setLink(note.link ?? ""); setDate(note.date);
     setDirty(false); setEditMeta(false);
@@ -242,7 +259,8 @@ function NoteEditorPanel({
           <span>Select text to format</span>
           <span style={{ marginLeft: "auto", color: dirty ? "var(--gold)" : "var(--dim)" }}>{dirty ? "● Unsaved" : "Saved"}</span>
         </div>
-        <BlockNoteView editor={editor} theme={DARK_THEME as any} style={{ minHeight: 340, padding: "4px 0" }} />
+        <BlockNoteView editor={editor} theme={DARK_THEME as any} sideMenu={false} style={{ minHeight: 340, padding: "4px 0", display: mounted ? undefined : "none" }} />
+        {!mounted && <div style={{ minHeight: 340, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--dim)", fontSize: 13 }}>Loading editor…</div>}
       </div>
     </div>
   );
@@ -265,6 +283,8 @@ function TemplateEditorPanel({
   const [dirty, setDirty]         = useState(false);
 
   const editor = useCreateBlockNote({ initialContent: template.blocks?.length ? template.blocks : undefined });
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   useEffect(() => editor.onChange(() => setDirty(true)), [editor]);
   useEffect(() => {
     setName(template.name); setDesc(template.description ?? "");
@@ -330,8 +350,9 @@ function TemplateEditorPanel({
             : <><span>Type <kbd style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 4, padding: "1px 5px", fontSize: 10 }}>/</kbd> for blocks</span><span style={{ marginLeft: "auto", color: dirty ? "var(--gold)" : "var(--dim)" }}>{dirty ? "● Unsaved" : "Saved"}</span></>
           }
         </div>
-        <BlockNoteView editor={editor} theme={DARK_THEME as any} style={{ minHeight: 340, padding: "4px 0" }}
+        <BlockNoteView editor={editor} theme={DARK_THEME as any} sideMenu={false} style={{ minHeight: 340, padding: "4px 0", display: mounted ? undefined : "none" }}
           editable={!isBuiltIn} />
+        {!mounted && <div style={{ minHeight: 340, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--dim)", fontSize: 13 }}>Loading editor…</div>}
       </div>
     </div>
   );

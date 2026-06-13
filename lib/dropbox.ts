@@ -1,7 +1,7 @@
 // ============================================================
 // Aye Aye Trader — Dropbox PKCE integration
-// Exact port of the DBX IIFE from index.html.
-// Client-side only (no backend). Dropbox wins on open.
+// CLIENT-SIDE ONLY. Every browser API is guarded so this
+// module is safe to import in a Next.js SSR context.
 // ============================================================
 
 import type { JournalDB } from "@/types/journal";
@@ -10,7 +10,7 @@ const DROPBOX_APP_KEY = "311hj348ml0d6l3";
 const DROPBOX_FILE    = "/ayeaye_journal.json";
 const TOK_KEY         = "ayeaye_dbx_token";
 const PKCE_KEY        = "ayeaye_dbx_pkce";
-const SAVE_EVERY      = 30_000; // ms
+const SAVE_EVERY      = 30_000;
 
 export type DbxStatus = "off" | "loading" | "saved" | "saving" | "dirty" | "error";
 
@@ -21,9 +21,35 @@ interface Token {
   account: string | null;
 }
 
-// ─────────────────────────────────────────────────────────────
-// PKCE helpers
-// ─────────────────────────────────────────────────────────────
+// ── Safe browser API wrappers ─────────────────────────────────
+const isBrowser = () => typeof window !== "undefined";
+
+function lsGet(key: string): string | null {
+  if (!isBrowser()) return null;
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+function lsSet(key: string, val: string) {
+  if (!isBrowser()) return;
+  try { localStorage.setItem(key, val); } catch {}
+}
+function lsDel(key: string) {
+  if (!isBrowser()) return;
+  try { localStorage.removeItem(key); } catch {}
+}
+function ssGet(key: string): string | null {
+  if (!isBrowser()) return null;
+  try { return sessionStorage.getItem(key); } catch { return null; }
+}
+function ssSet(key: string, val: string) {
+  if (!isBrowser()) return;
+  try { sessionStorage.setItem(key, val); } catch {}
+}
+function ssDel(key: string) {
+  if (!isBrowser()) return;
+  try { sessionStorage.removeItem(key); } catch {}
+}
+
+// ── PKCE helpers ──────────────────────────────────────────────
 function b64url(buf: ArrayBuffer): string {
   return btoa(String.fromCharCode(...new Uint8Array(buf)))
     .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -32,37 +58,49 @@ async function sha256(s: string): Promise<string> {
   return b64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)));
 }
 function randVerifier(): string {
-  const a = new Uint8Array(64); crypto.getRandomValues(a); return b64url(a.buffer);
+  const a = new Uint8Array(64);
+  crypto.getRandomValues(a);
+  return b64url(a.buffer);
 }
 function redirectUri(): string {
   return location.origin + location.pathname;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Token storage
-// ─────────────────────────────────────────────────────────────
+// ── Token storage ─────────────────────────────────────────────
 function loadTok(): Token | null {
-  try { return JSON.parse(localStorage.getItem(TOK_KEY) || "null"); } catch { return null; }
+  try { return JSON.parse(lsGet(TOK_KEY) || "null"); } catch { return null; }
 }
-function storeTok(t: Token) { localStorage.setItem(TOK_KEY, JSON.stringify(t)); }
-function clearTok() { localStorage.removeItem(TOK_KEY); }
+function storeTok(t: Token) { lsSet(TOK_KEY, JSON.stringify(t)); }
+function clearTok() { lsDel(TOK_KEY); }
 
 // ─────────────────────────────────────────────────────────────
-// Dropbox singleton (mirrors V1 DBX IIFE)
+// Dropbox singleton — lazy init, no browser calls at import time
 // ─────────────────────────────────────────────────────────────
 class DropboxSync {
-  private token: Token | null = loadTok();
-  private dirty = false;
-  private saving = false;
+  // token is loaded lazily on first access, not at construction
+  private _token: Token | null | undefined = undefined;
+  private dirty   = false;
+  private saving  = false;
   private timer: ReturnType<typeof setInterval> | null = null;
   private linkCache: Record<string, { url: string; exp: number }> = {};
 
-  // callbacks set by the React layer
   onStatus: ((s: DbxStatus) => void) | null = null;
   onAdopt:  ((db: JournalDB) => void) | null = null;
   getDB:    (() => JournalDB) | null = null;
 
+  private get token(): Token | null {
+    // First access: load from localStorage (safe because only called client-side)
+    if (this._token === undefined) {
+      this._token = loadTok();
+    }
+    return this._token;
+  }
+  private set token(t: Token | null) {
+    this._token = t;
+  }
+
   connected(): boolean {
+    if (!isBrowser()) return false;
     return !!(this.token?.refresh_token);
   }
 
@@ -70,26 +108,28 @@ class DropboxSync {
     this.onStatus?.(s);
   }
 
-  // ── Auth ──────────────────────────────────────────────────
+  // ── Auth ─────────────────────────────────────────────────
   async connect() {
+    if (!isBrowser()) return;
     const verifier  = randVerifier();
     const challenge = await sha256(verifier);
-    sessionStorage.setItem(PKCE_KEY, verifier);
+    ssSet(PKCE_KEY, verifier);
     const u = new URL("https://www.dropbox.com/oauth2/authorize");
-    u.searchParams.set("client_id",            DROPBOX_APP_KEY);
-    u.searchParams.set("response_type",        "code");
-    u.searchParams.set("code_challenge",       challenge);
-    u.searchParams.set("code_challenge_method","S256");
-    u.searchParams.set("token_access_type",    "offline");
-    u.searchParams.set("redirect_uri",         redirectUri());
+    u.searchParams.set("client_id",             DROPBOX_APP_KEY);
+    u.searchParams.set("response_type",         "code");
+    u.searchParams.set("code_challenge",        challenge);
+    u.searchParams.set("code_challenge_method", "S256");
+    u.searchParams.set("token_access_type",     "offline");
+    u.searchParams.set("redirect_uri",          redirectUri());
     location.href = u.toString();
   }
 
   async handleRedirect(): Promise<boolean> {
-    const p = new URLSearchParams(location.search);
+    if (!isBrowser()) return false;
+    const p    = new URLSearchParams(location.search);
     const code = p.get("code");
     if (!code) return false;
-    const verifier = sessionStorage.getItem(PKCE_KEY);
+    const verifier = ssGet(PKCE_KEY);
     if (!verifier) return false;
     try {
       const body = new URLSearchParams({
@@ -106,19 +146,19 @@ class DropboxSync {
       if (!r.ok) throw new Error("token exchange failed");
       const d = await r.json();
       const tok: Token = {
-        access_token: d.access_token,
+        access_token:  d.access_token,
         refresh_token: d.refresh_token,
-        expires_at: Date.now() + (d.expires_in || 14400) * 1000,
-        account: d.account_id ?? null,
+        expires_at:    Date.now() + (d.expires_in || 14400) * 1000,
+        account:       d.account_id ?? null,
       };
       this.token = tok;
       storeTok(tok);
-      sessionStorage.removeItem(PKCE_KEY);
-      history.replaceState({}, "", redirectUri()); // strip ?code= from URL
+      ssDel(PKCE_KEY);
+      history.replaceState({}, "", redirectUri());
       return true;
     } catch (e) {
       console.error("Dropbox auth error", e);
-      sessionStorage.removeItem(PKCE_KEY);
+      ssDel(PKCE_KEY);
       history.replaceState({}, "", redirectUri());
       return false;
     }
@@ -135,16 +175,16 @@ class DropboxSync {
 
   // ── Token refresh ─────────────────────────────────────────
   private async freshToken(): Promise<string | null> {
-    if (!this.token) return null;
+    if (!isBrowser() || !this.token) return null;
     if (this.token.access_token && Date.now() < this.token.expires_at - 60_000) {
       return this.token.access_token;
     }
     if (!this.token.refresh_token) { clearTok(); this.token = null; return null; }
     try {
       const body = new URLSearchParams({
-        grant_type: "refresh_token",
+        grant_type:    "refresh_token",
         refresh_token: this.token.refresh_token,
-        client_id: DROPBOX_APP_KEY,
+        client_id:     DROPBOX_APP_KEY,
       });
       const r = await fetch("https://api.dropboxapi.com/oauth2/token", {
         method: "POST",
@@ -170,11 +210,11 @@ class DropboxSync {
       const r = await fetch("https://content.dropboxapi.com/2/files/download", {
         method: "POST",
         headers: {
-          "Authorization": "Bearer " + at,
-          "Dropbox-API-Arg": JSON.stringify({ path: DROPBOX_FILE }),
+          "Authorization":    "Bearer " + at,
+          "Dropbox-API-Arg":  JSON.stringify({ path: DROPBOX_FILE }),
         },
       });
-      if (r.status === 409) return null; // file not found yet — first time
+      if (r.status === 409) return null;
       if (!r.ok) throw new Error("download " + r.status);
       return await r.json() as JournalDB;
     } catch (e) { console.error("Dropbox download", e); return null; }
@@ -190,15 +230,15 @@ class DropboxSync {
       const r = await fetch("https://content.dropboxapi.com/2/files/upload", {
         method: "POST",
         headers: {
-          "Authorization": "Bearer " + at,
-          "Content-Type": "application/octet-stream",
-          "Dropbox-API-Arg": JSON.stringify({ path: DROPBOX_FILE, mode: "overwrite", mute: true }),
+          "Authorization":    "Bearer " + at,
+          "Content-Type":     "application/octet-stream",
+          "Dropbox-API-Arg":  JSON.stringify({ path: DROPBOX_FILE, mode: "overwrite", mute: true }),
         },
         body: JSON.stringify(db),
       });
       if (!r.ok) throw new Error("upload " + r.status);
-      this.dirty   = false;
-      this.saving  = false;
+      this.dirty  = false;
+      this.saving = false;
       this.status("saved");
       return true;
     } catch (e) {
@@ -232,8 +272,8 @@ class DropboxSync {
     const r = await fetch("https://content.dropboxapi.com/2/files/upload", {
       method: "POST",
       headers: {
-        "Authorization": "Bearer " + at,
-        "Content-Type": "application/octet-stream",
+        "Authorization":   "Bearer " + at,
+        "Content-Type":    "application/octet-stream",
         "Dropbox-API-Arg": JSON.stringify({ path, mode: "add", mute: true }),
       },
       body: blob,
@@ -271,34 +311,36 @@ class DropboxSync {
     } catch { return false; }
   }
 
-  // ── Init (called once on mount) ───────────────────────────
+  // ── Init (called once on client mount) ───────────────────
   async init(): Promise<JournalDB | null> {
-    // 1) Returning from OAuth redirect?
-    if (location.search.includes("code=")) {
-      this.status("loading");
-      await this.handleRedirect();
-    }
-    // 2) If connected, pull remote as source of truth
-    if (this.connected()) {
-      this.status("loading");
-      const remote = await this.download();
-      if (remote) {
-        this.status(this.dirty ? "dirty" : "saved");
-        // Start autosave timer
+    if (!isBrowser()) return null;
+    try {
+      if (location.search.includes("code=")) {
+        this.status("loading");
+        await this.handleRedirect();
+      }
+      if (this.connected()) {
+        this.status("loading");
+        const remote = await this.download();
+        if (remote) {
+          this.status(this.dirty ? "dirty" : "saved");
+          if (!this.timer) {
+            this.timer = setInterval(() => this.tick(), SAVE_EVERY);
+          }
+          return remote;
+        } else {
+          await this.upload();
+          this.status("saved");
+        }
         if (!this.timer) {
           this.timer = setInterval(() => this.tick(), SAVE_EVERY);
         }
-        return remote; // caller calls onAdopt
       } else {
-        // First time: seed the file from local
-        await this.upload();
-        this.status("saved");
+        this.status("off");
       }
-      if (!this.timer) {
-        this.timer = setInterval(() => this.tick(), SAVE_EVERY);
-      }
-    } else {
-      this.status("off");
+    } catch (e) {
+      console.error("Dropbox init error", e);
+      this.status("error");
     }
     return null;
   }
@@ -308,5 +350,5 @@ class DropboxSync {
   }
 }
 
-// Singleton — one instance for the app lifetime
+// Singleton — safe to import anywhere; no browser calls happen until .init()
 export const DBX = new DropboxSync();

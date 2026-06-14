@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useDB } from "@/context/DBContext";
-import { uid } from "@/lib/db";
+import { uid, defaultStrategies } from "@/lib/db";
 import type { Broker } from "@/types/journal";
 
 const INPUT: React.CSSProperties = {
@@ -40,6 +40,52 @@ interface SettingsProps {
 export default function SettingsView({ theme = "dark", onToggleTheme }: SettingsProps) {
   const { db, save } = useDB();
   const s = db.settings;
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // ── Backup: export the whole journal to a JSON file (1:1 with V1 doExport)
+  const doExport = () => {
+    const blob = new Blob([JSON.stringify(db, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "ayeaye_journal_" + new Date().toISOString().slice(0, 10) + ".json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  // ── Restore: replace the journal from a JSON file (1:1 with V1 doImport)
+  const doImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const d: any = JSON.parse(String(r.result));
+        if (d && d.accounts && d.trades) {
+          if (confirm(`Import ${d.trades.length} trades & ${d.accounts.length} accounts? Replaces current data.`)) {
+            if (!d.groups) d.groups = [];
+            if (!d.strategies) d.strategies = defaultStrategies();
+            if (!d.notes) d.notes = [];
+            (d.accounts as any[]).forEach((a) => { if (!a.status) a.status = "active"; if (!a.ddtype) a.ddtype = "static"; if (!a.phases) a.phases = []; });
+            save(d);
+          }
+        } else if (Array.isArray(d)) {
+          if (confirm(`Old-format file (${d.length} trades). Import into one default account?`)) {
+            save({
+              accounts: [{ id: "legacy", name: "Imported", type: "personal", firm: "", broker: "", bal: 0, target: 0, dd: 0, ddtype: "static", cost: 0, copy: "no", comm: 0, dll: 0, pdll: 0, status: "active", phases: [] } as any],
+              trades: (d as any[]).map((t) => ({ ...t, legs: [{ acct: "legacy", pnl: t.pnl || 0 }] })),
+              groups: [], strategies: defaultStrategies(), settings: db.settings, notes: [], templates: db.templates ?? [],
+            } as any);
+          }
+        } else {
+          alert("Unrecognized file");
+        }
+      } catch {
+        alert("Invalid file");
+      }
+    };
+    r.readAsText(f);
+    e.target.value = "";
+  };
 
   // Local state mirrors settings fields
   const [commMini, setCommMini]   = useState(String(s.commMini ?? 2.10));
@@ -226,6 +272,26 @@ export default function SettingsView({ theme = "dark", onToggleTheme }: Settings
             >
               {theme === "dark" ? "☀️ Light mode" : "🌙 Dark mode"}
             </button>
+          </div>
+        </SetCard>
+      </div>
+
+      {/* ── Backup & data ── */}
+      <div style={{ marginBottom: 28 }}>
+        <SectionTitle>Backup &amp; data</SectionTitle>
+        <SetCard>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3 }}>Export / import journal</div>
+              <div style={{ fontSize: 12, color: "var(--mut)", lineHeight: 1.6 }}>
+                Download a full JSON backup of every account, trade, strategy and note — or restore one. Importing replaces all current data.
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
+              <button className="btn" onClick={doExport}>⬇ Export</button>
+              <button className="btn" onClick={() => fileRef.current?.click()}>⬆ Import</button>
+              <input ref={fileRef} type="file" accept=".json" style={{ display: "none" }} onChange={doImport} />
+            </div>
           </div>
         </SetCard>
       </div>

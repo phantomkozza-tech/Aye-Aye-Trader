@@ -68,7 +68,11 @@ export default function StrategiesView() {
     a = Math.min(a, aplus);
 
     const id = modal.editId ?? uid();
-    const s: Strategy = { id, name, criteria, thresholds: { aplus, a } };
+    const prev = db.strategies.find((x) => x.id === id);
+    const s: Strategy = {
+      id, name, criteria, thresholds: { aplus, a },
+      surveys: prev?.surveys, masteryOverride: prev?.masteryOverride,
+    };
 
     const next = { ...db };
     const ix = next.strategies.findIndex((x) => x.id === id);

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useDB } from "@/context/DBContext";
-import { uid, fmt, legComm, commRateFor } from "@/lib/db";
+import { uid, fmt, legComm, commRateFor, simulateDdBlows, applyTradeBlows, activePhase } from "@/lib/db";
 import { instPt, calcLegPnl, calcR, tagColor, pickInk, INST_KEYS } from "@/lib/instruments";
 import type { Trade, TradeLeg, Grade } from "@/types/journal";
 
@@ -67,7 +67,7 @@ function StepPills({ step }: { step: number }) {
 }
 
 // ── Main component ───────────────────────────────────────────
-export default function AddTradeView({ onDone, onCsvImport }: { onDone: () => void; onCsvImport?: () => void }) {
+export default function AddTradeView({ onDone, onCsvImport, editTradeId }: { onDone: (blewUp?: boolean) => void; onCsvImport?: () => void; editTradeId?: string | null }) {
   const { db, save } = useDB();
 
   const [step, setStep] = useState(0);
@@ -103,6 +103,61 @@ export default function AddTradeView({ onDone, onCsvImport }: { onDone: () => vo
   const [disc, setDisc] = useState("");
   const [plan, setPlan] = useState("Yes");
   const [notes, setNotes] = useState("");
+
+  // ── Load an existing trade for editing ─────────────────────
+  // Mirrors V1 editTrade(): the trade that blew an account stays locked.
+  useEffect(() => {
+    if (!editTradeId) return;
+    const t = db.trades.find((x) => x.id === editTradeId);
+    if (!t) return;
+    const blew = db.accounts.filter((a) => a.status === "blown" && a.blownTradeId === t.id);
+    if (blew.length) {
+      alert(
+        `This trade can't be edited.\n\nIt's the trade that blew: ${blew.map((a) => a.name).join(", ")}. ` +
+        `It stays locked to preserve the record of the blow.`
+      );
+      onDone();
+      return;
+    }
+    setEditId(t.id);
+    setDate(t.date);
+    setInst(t.inst);
+    setDir(t.dir);
+    setEntryTime(t.entryTime ?? "");
+    setExitTime(t.exitTime ?? "");
+    setRMultiple(t.r ?? "");
+    setSetupId(t.setupId || db.strategies.find((s) => s.name === t.setup)?.id || db.strategies[0]?.id || "");
+    setMetCrit(new Set(t.metCrit ?? []));
+    setGrade(t.grade ?? "");
+    setTags({
+      feelings: [...(t.tags?.feelings ?? [])],
+      actions: [...(t.tags?.actions ?? [])],
+      execution: [...(t.tags?.execution ?? [])],
+    });
+    setDisc(t.disc ?? "");
+    setPlan(t.plan ?? "Yes");
+    setNotes(t.notes ?? "");
+    setLegs(
+      db.accounts
+        .filter((a) => a.status !== "blown" || (t.legs ?? []).some((l) => l.acct === a.id))
+        .map((a) => {
+          const leg = (t.legs ?? []).find((l) => l.acct === a.id);
+          return leg
+            ? {
+                acctId: a.id, checked: true,
+                size: leg.size != null ? String(leg.size) : "",
+                entry: leg.entry != null ? String(leg.entry) : "",
+                sl: leg.sl != null ? String(leg.sl) : "",
+                exit: leg.exit != null ? String(leg.exit) : "",
+                pnl: leg.pnl != null ? String(leg.pnl) : "",
+                slip: leg.slip != null ? String(leg.slip) : "",
+              }
+            : { acctId: a.id, checked: false, size: "", entry: "", sl: "", exit: "", pnl: "", slip: "" };
+        })
+    );
+    setStep(1); // skip the method picker straight into the form
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editTradeId]);
 
   // ── Leg recalc ─────────────────────────────────────────────
   const recalcLeg = useCallback((idx: number, updated: Partial<LegDraft>) => {
@@ -196,16 +251,20 @@ export default function AddTradeView({ onDone, onCsvImport }: { onDone: () => vo
     }
 
     const rate = commRateFor(inst, db.settings);
-    const builtLegs: TradeLeg[] = checkedLegs.map((l) => ({
-      acct: l.acctId,
-      size: parseFloat(l.size) || undefined,
-      entry: parseFloat(l.entry) || undefined,
-      sl: parseFloat(l.sl) || undefined,
-      exit: parseFloat(l.exit) || undefined,
-      pnl: parseFloat(l.pnl) || 0,
-      slip: parseFloat(l.slip) || 0,
-      comm: rate,
-    }));
+    const builtLegs: TradeLeg[] = checkedLegs.map((l) => {
+      const acct = db.accounts.find((a) => a.id === l.acctId);
+      return {
+        acct: l.acctId,
+        size: parseFloat(l.size) || undefined,
+        entry: parseFloat(l.entry) || undefined,
+        sl: parseFloat(l.sl) || undefined,
+        exit: parseFloat(l.exit) || undefined,
+        pnl: parseFloat(l.pnl) || 0,
+        slip: parseFloat(l.slip) || 0,
+        comm: rate,
+        phase: acct ? activePhase(acct)?.id ?? undefined : undefined,
+      };
+    });
 
     const strat = db.strategies.find((s) => s.id === setupId);
     const trade: Trade = {
@@ -227,14 +286,33 @@ export default function AddTradeView({ onDone, onCsvImport }: { onDone: () => vo
       legs: builtLegs,
     };
 
-    const nextDB = { ...db };
-    const ix = nextDB.trades.findIndex((t) => t.id === trade.id);
-    if (ix >= 0) nextDB.trades[ix] = trade;
-    else nextDB.trades = [...nextDB.trades, trade];
-    nextDB.trades.sort((a, b) => a.date.localeCompare(b.date));
+    // ── Blow-up detection ──────────────────────────────────────
+    // Warn BEFORE committing if this trade pushes any account past its
+    // drawdown floor. evalDrawdownSim excludes this trade's id, so it works
+    // for both new trades and edits.
+    const ddBlows = simulateDdBlows(db, trade);
+    if (ddBlows.length) {
+      const names = ddBlows
+        .map((b) => `• ${b.name} (balance would hit ${fmt(b.curBal)}, floor ${fmt(b.floor)})`)
+        .join("\n");
+      if (!confirm(
+        `⚠ This trade BLOWS the following account(s):\n\n${names}\n\n` +
+        `Logging it will permanently mark them blown (locked, removed from new trades, kept for records).\n\nProceed?`
+      )) return;
+    }
+
+    const working = { ...db, trades: [...db.trades] };
+    const ix = working.trades.findIndex((t) => t.id === trade.id);
+    if (ix >= 0) working.trades[ix] = trade;
+    else working.trades.push(trade);
+    working.trades.sort((a, b) => a.date.localeCompare(b.date));
+
+    // Apply the blow-up (drawdown + personal-account margin floor) now that the
+    // trade is in the DB, flipping accounts to "blown" and sealing their phase.
+    const { db: nextDB, blown } = applyTradeBlows(working, trade);
 
     save(nextDB);
-    onDone();
+    onDone(blown.length > 0);
   };
 
   const reset = () => {

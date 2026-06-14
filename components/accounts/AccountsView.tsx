@@ -113,8 +113,8 @@ function PathBar({ a, pnl }: { a: Account; pnl: number }) {
 }
 
 // ── Account card ─────────────────────────────────────────────
-function AccountCard({ a, onEdit, onDelete, onBlow }: {
-  a: Account; onEdit: () => void; onDelete: () => void; onBlow: () => void;
+function AccountCard({ a, onEdit, onDelete, onBlow, onOpen }: {
+  a: Account; onEdit: () => void; onDelete: () => void; onBlow: () => void; onOpen: () => void;
 }) {
   const { db } = useDB();
   const ap = activePhase(a);
@@ -125,8 +125,10 @@ function AccountCard({ a, onEdit, onDelete, onBlow }: {
   const totalCost = acctPhases(a).reduce((s, p) => s + (p.cost ?? 0), 0) + (a.resets ?? []).reduce((s, r) => s + (r.amount ?? 0), 0);
 
   return (
-    <div style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 14,
-      padding: "18px 20px", display: "flex", flexDirection: "column", gap: 0 }}>
+    <div onClick={onOpen} style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 14,
+      padding: "18px 20px", display: "flex", flexDirection: "column", gap: 0, cursor: "pointer", transition: ".12s" }}
+      onMouseOver={(e) => (e.currentTarget.style.borderColor = "var(--green)")}
+      onMouseOut={(e) => (e.currentTarget.style.borderColor = "var(--line)")}>
       {/* Name row */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
         <span style={{ fontSize: 15, fontWeight: 800 }}>{a.name}</span>
@@ -163,10 +165,12 @@ function AccountCard({ a, onEdit, onDelete, onBlow }: {
       <PathBar a={a} pnl={pnl} />
 
       {/* Actions */}
-      <div style={{ display: "flex", gap: 14, marginTop: 8, paddingTop: 10, borderTop: "1px solid var(--line)" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ display: "flex", gap: 14, marginTop: 8, paddingTop: 10, borderTop: "1px solid var(--line)" }}>
         <span style={{ fontSize: 12, color: "var(--blue)", cursor: "pointer" }} onClick={onEdit}>✎ edit</span>
         <span style={{ fontSize: 12, color: "var(--mut)", cursor: "pointer" }} onClick={onDelete}>✕ delete</span>
         <span style={{ fontSize: 12, color: "var(--red)", cursor: "pointer" }} onClick={onBlow}>✖ mark blown</span>
+        <span style={{ flex: 1 }} />
+        <span style={{ fontSize: 12, color: "var(--mut)", cursor: "pointer" }} onClick={onOpen}>dashboard →</span>
       </div>
     </div>
   );
@@ -197,7 +201,7 @@ const emptyModal = (): ModalState => ({
   cost: "", copy: "yes", dll: "", pdll: "",
 });
 
-export default function AccountsView() {
+export default function AccountsView({ onOpenAcct }: { onOpenAcct?: (id: string) => void }) {
   const { db, save } = useDB();
   const [modal, setModal] = useState<ModalState>(emptyModal());
 
@@ -321,7 +325,8 @@ export default function AccountsView() {
             <AccountCard key={a.id} a={a}
               onEdit={() => openEdit(a)}
               onDelete={() => deleteAcct(a.id)}
-              onBlow={() => blowAcct(a.id)} />
+              onBlow={() => blowAcct(a.id)}
+              onOpen={() => onOpenAcct?.(a.id)} />
           ))}
         </div>
       )}

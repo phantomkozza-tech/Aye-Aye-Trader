@@ -49,6 +49,8 @@ export interface Account {
   status: AccountStatus;
   blownDate?: string;
   blownTradeId?: string;
+  blownReason?: "drawdown" | "margin";
+  debt?: number;
   phases: Phase[];
   resets?: Reset[];
 }
@@ -94,11 +96,20 @@ export interface StrategyThresholds {
   a: number;
 }
 
+export interface StrategySurvey {
+  reps: number;
+  automatic: boolean;
+  drift: boolean;
+  date: string;
+}
+
 export interface Strategy {
   id: string;
   name: string;
   criteria: string[];
   thresholds: StrategyThresholds;
+  surveys?: StrategySurvey[];
+  masteryOverride?: "Developing" | "Mastered" | "No edge" | null;
 }
 
 export interface Broker {

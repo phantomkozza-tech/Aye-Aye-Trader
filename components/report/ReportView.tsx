@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useDB } from "@/context/DBContext";
-import { fmt, fmtDur, legNet, legComm } from "@/lib/db";
+import { fmt, fmtDur, legNet, legComm, today, evalDrawdownSim as evalDrawdownSimCore } from "@/lib/db";
 import type { JournalDB, Account, Trade, TradeLeg, Strategy } from "@/types/journal";
 
 // ─────────────────────────────────────────────────────────────
@@ -168,22 +168,10 @@ function consistencyScore(daily: {net:number}[]) {
 }
 
 function evalDrawdownSim(db: JournalDB, acctId: string) {
-  const a = db.accounts.find(x => x.id === acctId);
-  if (!a) return { start:0, dd:0, floor:0, curBal:0, type:"static" };
-  const p = activePhase(a);
-  const start = p?.startBal ?? (a.bal || 0);
-  const dd    = p?.dd    ?? (a as any).dd    ?? 0;
-  const type  = p?.ddtype ?? (a as any).ddtype ?? "static";
-  let curBal  = start;
-  db.trades.forEach(t => {
-    (t.legs||[]).forEach(l => {
-      if (l.acct === acctId && legPhaseId(a, l, t.date) === p?.id) {
-        curBal += legNet(l);
-      }
-    });
-  });
-  const floor = type === "static" ? start - dd : Math.max(0, start - dd);
-  return { start, dd, floor, curBal, type };
+  // Delegate to the canonical sim in lib/db.ts so the Eval Gauntlet uses the
+  // same correct static / intraday-trailing / eod-trailing drawdown math as
+  // blow-up detection (the previous local version mis-computed the trailing floor).
+  return evalDrawdownSimCore(db, acctId);
 }
 
 function marginSim(a: Account) {
@@ -647,7 +635,7 @@ function PerfView({ T, chartReady }: { T: FilteredTrade[]; chartReady: boolean }
 // ─────────────────────────────────────────────────────────────
 // Sub-tab: Trading System
 // ─────────────────────────────────────────────────────────────
-function SystemView({ db, T, onOpenStrat }: { db: JournalDB; T: FilteredTrade[]; onOpenStrat: (id: string) => void }) {
+function SystemView({ db, T, save, onOpenStrat }: { db: JournalDB; T: FilteredTrade[]; save: (db: JournalDB) => void; onOpenStrat: (id: string) => void }) {
   const strats = db.strategies || [];
   const all = T;
   const trust = all.length ? Math.round(all.filter(isConfirmed).length/all.length*100) : 0;
@@ -663,6 +651,27 @@ function SystemView({ db, T, onOpenStrat }: { db: JournalDB; T: FilteredTrade[];
   const started   = masteries.filter(x=>x.m.reps>0);
   const anyDeep   = masteries.some(x=>x.m.reps>=25);
 
+  // ── Survey check-in (1:1 with HTML recordSurvey) ──────────────
+  // Local answers per due strategy, keyed by strategy id.
+  const [svAnswers, setSvAnswers] = useState<Record<string, { auto: string; drift: string }>>({});
+  const svFor = (id: string) => svAnswers[id] ?? { auto: "Not yet", drift: "Exactly" };
+  const setSv = (id: string, patch: Partial<{ auto: string; drift: string }>) =>
+    setSvAnswers((prev) => ({ ...prev, [id]: { ...svFor(id), ...patch } }));
+
+  function recordSurvey(s: Strategy) {
+    const ans = svFor(s.id);
+    const reps = stratTrades(s).length;
+    const survey = { reps, automatic: ans.auto === "Yes", drift: ans.drift !== "Exactly", date: today() };
+    const next = {
+      ...db,
+      strategies: (db.strategies || []).map((x) =>
+        x.id === s.id ? { ...x, surveys: [...((x as any).surveys || []), survey] } : x
+      ),
+    };
+    save(next);
+    setSvAnswers((prev) => { const n = { ...prev }; delete n[s.id]; return n; });
+  }
+
   return (
     <div>
       <div className="coach-strip">
@@ -676,6 +685,27 @@ function SystemView({ db, T, onOpenStrat }: { db: JournalDB; T: FilteredTrade[];
       {started.length>=3&&!anyDeep&&(
         <div className="hop-banner">⚓ You've started <b>{started.length}</b> setups and none has even 25 reps. Mastery comes from depth, not collection — a setup needs ~100 clean reps before you can trust it. Pick one and put the reps in.</div>
       )}
+
+      {masteries.filter(x=>x.m.surveyDue).map(({s,m})=>{
+        const ans = svFor(s.id);
+        return (
+          <div key={"sv-"+s.id} className="survey-card">
+            <div className="sv-h">📋 {m.reps}-rep check-in — {s.name}</div>
+            <div className="sv-d">Quick read on where this setup stands. Honest answers keep your mastery call accurate.</div>
+            <label>Does executing this feel automatic / boring now?
+              <select value={ans.auto} onChange={e=>setSv(s.id,{auto:e.target.value})}>
+                <option>Not yet</option><option>Yes</option>
+              </select>
+            </label>
+            <label>Are you still entering on the exact criteria?
+              <select value={ans.drift} onChange={e=>setSv(s.id,{drift:e.target.value})}>
+                <option>Exactly</option><option>They've loosened</option>
+              </select>
+            </label>
+            <button className="btn sm primary" onClick={()=>recordSurvey(s)}>Save check-in</button>
+          </div>
+        );
+      })}
 
       <div className="card" style={{marginBottom:18}}>
         <div className="diag-head" style={{margin:0}} dangerouslySetInnerHTML={{__html:head}}/>
@@ -717,9 +747,18 @@ function SystemView({ db, T, onOpenStrat }: { db: JournalDB; T: FilteredTrade[];
 // ─────────────────────────────────────────────────────────────
 // Sub-tab: Strat Detail (drilled from System)
 // ─────────────────────────────────────────────────────────────
-function StratDetailView({ db, T, stratId, onBack }: { db: JournalDB; T: FilteredTrade[]; stratId: string; onBack: ()=>void }) {
+function StratDetailView({ db, T, stratId, save, onBack }: { db: JournalDB; T: FilteredTrade[]; stratId: string; save: (db: JournalDB) => void; onBack: ()=>void }) {
   const s = (db.strategies||[]).find(x=>x.id===stratId);
   if (!s) return null;
+  function setMastery(val: string) {
+    const next = {
+      ...db,
+      strategies: (db.strategies || []).map((x) =>
+        x.id === stratId ? { ...x, masteryOverride: (val || null) as any } : x
+      ),
+    };
+    save(next);
+  }
   const g = T.filter(t=>t.setupId===s.id||t.setup===s.name);
   const b = repBucket(g);
   const m = strategyMastery(s, g);
@@ -729,7 +768,6 @@ function StratDetailView({ db, T, stratId, onBack }: { db: JournalDB; T: Filtere
   if(m.state==="Mastered"){cls="master";mbTxt=`<b>Mastered.</b> ${m.reps} reps with steady results — you know this setup. Over-trading it now is churn, not learning. Protect the edge, don't dilute it.`;}
   else if(m.state==="No edge"){cls="noedge";mbTxt=`<b>No edge found.</b> ${m.reps} reps and it's still ${fmt(m.b.exp)}/trade. That isn't a discipline problem — the setup isn't producing. Test a different approach instead of grinding a ${m.reps+1}th rep.`;}
   else{cls="dev";mbTxt=`<b>Developing — ${m.reps} of ${MASTERY_REPS} reps.</b> At this stage, volume can be deliberate practice, not over-trading. So far ${m.b.wr}% win, ${m.b.exp>=0?"+":""}${fmt(m.b.exp)}/trade.${driftWarn}`;}
-  const disagree = (m.override&&m.override!==m.mathState)?`<div class="m-override" style="color:var(--gold)">⚑ You marked this <b>${m.override}</b>; the data reads <b>${m.mathState}</b> (${m.reps} reps${m.stable?"":", results still swinging"}).</div>`:"";
   const trust = g.length?Math.round(g.filter(isConfirmed).length/g.length*100):0;
   const discVals=g.map(t=>parseInt((t as any).disc)).filter(v=>!isNaN(v));
   const avgDisc=discVals.length?(discVals.reduce((a,b)=>a+b,0)/discVals.length):null;
@@ -776,7 +814,27 @@ function StratDetailView({ db, T, stratId, onBack }: { db: JournalDB; T: Filtere
         <div className="diag-empty">No trades logged for <b>{s.name}</b> yet.</div>
       ):(
         <>
-          <div className={`m-banner ${cls}`} dangerouslySetInnerHTML={{__html:mbTxt+`<div class="m-override">Mastery call: <span style="color:var(--gold)">${m.state}</span><span style="opacity:.6"> — override in Strategies view</span></div>${disagree}`}}/>
+          <div className={`m-banner ${cls}`}>
+            <span dangerouslySetInnerHTML={{__html:mbTxt}}/>
+            <div className="m-override">
+              Mastery call:
+              <select
+                value={m.override || "Auto"}
+                onChange={(e)=>setMastery(e.target.value==="Auto"?"":e.target.value)}
+              >
+                <option>Auto</option>
+                <option>Developing</option>
+                <option>Mastered</option>
+                <option>No edge</option>
+              </select>
+              <span style={{opacity:.6}}> — journal decides, you can override</span>
+            </div>
+            {m.override&&m.override!==m.mathState&&(
+              <div className="m-override" style={{color:"var(--gold)"}}>
+                ⚑ You marked this <b>{m.override}</b>; the data reads <b>{m.mathState}</b> ({m.reps} reps{m.stable?"":", results still swinging"}).
+              </div>
+            )}
+          </div>
           <div className="sd-grid">
             {stat("Win rate",b.wr+"%",b.wins+" of "+b.n+" trades")}
             {stat("Net P&L",fmt(b.pnl),"all accounts",b.pnl>=0?"var(--green)":"var(--red)")}
@@ -1137,7 +1195,7 @@ function RoadmapPanel({ db, a, pct, setPct }: { db: JournalDB; a: Account; pct: 
 // Main ReportView
 // ─────────────────────────────────────────────────────────────
 export default function ReportView() {
-  const { db } = useDB();
+  const { db, save } = useDB();
   const chartReady = useChartJS();
   const [sub, setSub]     = useState<SubTab>("perf");
   const [stratId, setStratId] = useState<string|null>(null);
@@ -1164,11 +1222,11 @@ export default function ReportView() {
 
   function renderContent() {
     if (sub==="system"&&stratId) {
-      return <StratDetailView db={db} T={T} stratId={stratId} onBack={()=>setStratId(null)}/>;
+      return <StratDetailView db={db} T={T} stratId={stratId} save={save} onBack={()=>setStratId(null)}/>;
     }
     switch(sub) {
       case "perf":   return <PerfView T={T} chartReady={chartReady}/>;
-      case "system": return <SystemView db={db} T={T} onOpenStrat={id=>{setStratId(id);}}/>;
+      case "system": return <SystemView db={db} T={T} save={save} onOpenStrat={id=>{setStratId(id);}}/>;
       case "eval":   return <EvalView db={db}/>;
       case "psych":  return <PsychView db={db} T={T}/>;
       case "road":   return <RoadmapView db={db}/>;

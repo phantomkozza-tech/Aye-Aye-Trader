@@ -6,6 +6,7 @@ import { DBProvider } from "@/context/DBContext";
 import DashView from "@/components/dashboard/DashView";
 import AddTradeView from "@/components/add-trade/AddTradeView";
 import AccountsView from "@/components/accounts/AccountsView";
+import AccountDashView from "@/components/accounts/AccountDashView";
 import SettingsView from "@/components/settings/SettingsView";
 import BlownView from "@/components/blown/BlownView";
 import StrategiesView from "@/components/strategies/StrategiesView";
@@ -14,6 +15,7 @@ import TradeLogView from "@/components/trade-log/TradeLogView";
 import DayDetailView from "@/components/day-detail/DayDetailView";
 import CsvImportView from "@/components/csv-import/CsvImportView";
 import ReportView from "@/components/report/ReportView";
+import { randomBlowupLine } from "@/lib/db";
 
 // BlockNote uses browser-only APIs — must never run on the server
 const NotesView = dynamic(() => import("@/components/notes/NotesView"), {
@@ -47,6 +49,9 @@ function JournalShell({ userEmail }: { userEmail: string }) {
   const [dayDetail, setDayDetail] = useState<string | null>(null);
   const [csvMode, setCsvMode] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [blowupLine, setBlowupLine] = useState<string | null>(null);
+  const [editTradeId, setEditTradeId] = useState<string | null>(null);
+  const [acctDashId, setAcctDashId] = useState<string | null>(null);
 
   // Dash filter state — shared with DayDetailView
   const [dashSelAccts, setDashSelAccts] = useState<Set<string>>(new Set());
@@ -73,8 +78,9 @@ function JournalShell({ userEmail }: { userEmail: string }) {
     localStorage.setItem(THEME_KEY, next);
   }
 
-  const goTab = (t: TabId) => { setTab(t); setDayDetail(null); setCsvMode(false); };
+  const goTab = (t: TabId) => { setTab(t); setDayDetail(null); setCsvMode(false); setEditTradeId(null); setAcctDashId(null); };
   const goCsv = () => { setDayDetail(null); setCsvMode(true); };
+  const fireBlowup = () => setBlowupLine(randomBlowupLine());
 
   const renderView = () => {
     if (dayDetail) {
@@ -92,7 +98,11 @@ function JournalShell({ userEmail }: { userEmail: string }) {
     }
 
     if (csvMode) {
-      return <CsvImportView onDone={() => { setCsvMode(false); goTab("log"); }} />;
+      return <CsvImportView onDone={(blewUp?: boolean) => { setCsvMode(false); if (blewUp) { fireBlowup(); goTab("blown"); } else goTab("log"); }} />;
+    }
+
+    if (acctDashId) {
+      return <AccountDashView acctId={acctDashId} onBack={() => setAcctDashId(null)} />;
     }
 
     switch (tab) {
@@ -110,9 +120,9 @@ function JournalShell({ userEmail }: { userEmail: string }) {
             setTo={setDashTo}
           />
         );
-      case "log":      return <TradeLogView onEditTrade={() => goTab("add")} />;
-      case "add":      return <AddTradeView onDone={() => goTab("dash")} onCsvImport={() => setCsvMode(true)} />;
-      case "accts":    return <AccountsView />;
+      case "log":      return <TradeLogView onEditTrade={(id) => { goTab("add"); setEditTradeId(id); }} />;
+      case "add":      return <AddTradeView editTradeId={editTradeId} onDone={(blewUp?: boolean) => { setEditTradeId(null); if (blewUp) { fireBlowup(); goTab("blown"); } else goTab("dash"); }} onCsvImport={() => setCsvMode(true)} />;
+      case "accts":    return <AccountsView onOpenAcct={(id) => setAcctDashId(id)} />;
       case "settings": return <SettingsView theme={theme} onToggleTheme={toggleTheme} />;
       case "blown":    return <BlownView />;
       case "strats":   return <StrategiesView />;
@@ -166,6 +176,43 @@ function JournalShell({ userEmail }: { userEmail: string }) {
           {renderView()}
         </div>
       </div>
+
+      {blowupLine && (
+        <div
+          onClick={() => setBlowupLine(null)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 210,
+            background: "rgba(10,5,7,.88)", backdropFilter: "blur(3px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 24, animation: "fade .2s ease",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "linear-gradient(160deg,#1a0e12,var(--panel))",
+              border: "1px solid var(--red)", borderRadius: 18,
+              padding: "36px 30px", maxWidth: 440, textAlign: "center",
+              boxShadow: "0 24px 70px rgba(240,85,109,.25)",
+            }}
+          >
+            <div style={{ fontSize: 54, marginBottom: 8 }}>🪦</div>
+            <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: 2, color: "var(--red)", marginBottom: 14 }}>
+              ACCOUNT BLOWN
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.5, color: "var(--txt)" }}>
+              {blowupLine}
+            </div>
+            <button
+              className="btn"
+              onClick={() => setBlowupLine(null)}
+              style={{ marginTop: 22, borderColor: "var(--red)", color: "var(--red)" }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

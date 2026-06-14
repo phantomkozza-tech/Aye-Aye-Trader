@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useDB } from "@/context/DBContext";
-import { uid, acctMap, legComm } from "@/lib/db";
+import { uid, acctMap, legComm, sweepAllBlows, activePhase } from "@/lib/db";
 import { tagColor, pickInk } from "@/lib/instruments";
 import {
   SUPPORTED, parseTradeFile, importKey, impHhmm, rootToInst, impSummary,
@@ -17,7 +17,7 @@ interface EmoState    { feelings: string[]; actions: string[]; execution: string
 function defaultStrat(): StratState  { return { sid: "", met: [], grade: "", sl: null, r: "" }; }
 function defaultEmo():   EmoState    { return { feelings: [], actions: [], execution: [], disc: "", plan: "Yes", notes: "" }; }
 
-interface Props { onDone?: () => void; }
+interface Props { onDone?: (blewUp?: boolean) => void; }
 
 export default function CsvImportView({ onDone }: Props) {
   const { db, save } = useDB();
@@ -364,7 +364,8 @@ export default function CsvImportView({ onDone }: Props) {
         return {
           acct: aid, size: tr.size,
           entry: tr.entryPrice, sl: st2.sl ?? null, exit: tr.exitPrice,
-          pnl: tr.grossPnL ?? 0, slip: 0, comm: rate, phase: null,
+          pnl: tr.grossPnL ?? 0, slip: 0, comm: rate,
+          phase: a ? activePhase(a)?.id ?? null : null,
         };
       });
       const notesHtml = `<p><em>Imported from ${parsed.platform}</em></p>` +
@@ -382,9 +383,16 @@ export default function CsvImportView({ onDone }: Props) {
       added++;
     });
     newTrades.sort((a, b) => a.date.localeCompare(b.date));
-    save({ ...db, trades: newTrades });
-    alert(`Imported ${added} trade${added !== 1 ? "s" : ""} across ${targetIds.length} account${targetIds.length !== 1 ? "s" : ""}.`);
-    onDone?.();
+
+    // After a batch import, sweep every account: a stretch of imported losses
+    // can cross a drawdown / margin floor just like a manual trade would.
+    const { db: sweptDB, blown } = sweepAllBlows({ ...db, trades: newTrades });
+    save(sweptDB);
+    const blownMsg = blown.length
+      ? `\n\n☠ ${blown.length} account${blown.length !== 1 ? "s" : ""} blew on these trades: ${blown.map((a) => a.name).join(", ")}.`
+      : "";
+    alert(`Imported ${added} trade${added !== 1 ? "s" : ""} across ${targetIds.length} account${targetIds.length !== 1 ? "s" : ""}.${blownMsg}`);
+    onDone?.(blown.length > 0);
   }
 
   /* ── Nav ── */

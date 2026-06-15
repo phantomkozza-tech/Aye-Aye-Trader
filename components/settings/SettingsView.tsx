@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useDB } from "@/context/DBContext";
 import { uid, defaultStrategies } from "@/lib/db";
+import EmojiPicker from "@/components/settings/EmojiPicker";
 import type { Broker } from "@/types/journal";
 
 const INPUT: React.CSSProperties = {
@@ -94,6 +95,7 @@ export default function SettingsView({ theme = "dark", onToggleTheme }: Settings
   const [maxTrades, setMaxTrades] = useState(String(s.maxTradesPerDay ?? 5));
   const [rapidMins, setRapidMins] = useState(String(s.rapidMins ?? 5));
   const [onenote, setOnenote]     = useState(s.onenote ?? "");
+  const [emoji, setEmoji]         = useState(s.emoji ?? "😮‍💨");
   const [saved, setSaved]         = useState(false);
 
   // Firms
@@ -125,6 +127,7 @@ export default function SettingsView({ theme = "dark", onToggleTheme }: Settings
       maxTradesPerDay: Math.max(1, parseInt(maxTrades) || 5),
       rapidMins: Math.max(1, parseInt(rapidMins) || 5),
       onenote: onenote.trim(),
+      emoji: emoji || "😮‍💨",
       journalAccts: [...journalAccts],
     };
     save(next);
@@ -272,6 +275,22 @@ export default function SettingsView({ theme = "dark", onToggleTheme }: Settings
             >
               {theme === "dark" ? "☀️ Light mode" : "🌙 Dark mode"}
             </button>
+          </div>
+        </SetCard>
+      </div>
+
+      {/* ── Account marker ── */}
+      <div style={{ marginBottom: 28 }}>
+        <SectionTitle>Account marker</SectionTitle>
+        <SetCard>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3 }}>Account marker emoji</div>
+              <div style={{ fontSize: 12, color: "var(--mut)", lineHeight: 1.6 }}>
+                Marks your position on the path-to-passing bar on each account card. Search or pick a category.
+              </div>
+            </div>
+            <EmojiPicker value={emoji} onChange={setEmoji} />
           </div>
         </SetCard>
       </div>

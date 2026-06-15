@@ -10,6 +10,7 @@ interface Props {
   onToggleTheme: () => void;
   onCsvImport: () => void;
   onHome: () => void;
+  onLogTrade: () => void;
 }
 
 const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
@@ -57,7 +58,7 @@ const STATUS_MAP: Record<string, { label: string; color: string; icon: string }>
   error:   { label: "Dropbox: error",    color: "var(--red)",  icon: "☁ " },
 };
 
-export default function DashboardHeader({ userEmail, theme, onToggleTheme, onCsvImport, onHome }: Props) {
+export default function DashboardHeader({ userEmail, theme, onToggleTheme, onCsvImport, onHome, onLogTrade }: Props) {
   const router   = useRouter();
   const supabase = createClient();
   const { db, save, dbxStatus, dbxConnected, dbxConnect, dbxDisconnect } = useDB();
@@ -160,7 +161,7 @@ export default function DashboardHeader({ userEmail, theme, onToggleTheme, onCsv
         </button>
 
         {/* Log Trade */}
-        <button className="btn primary" onClick={() => router.push("/dashboard?tab=add")}>
+        <button className="btn primary" onClick={onLogTrade}>
           + Log Trade
         </button>
 

@@ -102,7 +102,7 @@ function JournalShell({ userEmail }: { userEmail: string }) {
     }
 
     if (acctDashId) {
-      return <AccountDashView acctId={acctDashId} onBack={() => setAcctDashId(null)} />;
+      return <AccountDashView acctId={acctDashId} theme={theme} onBack={() => setAcctDashId(null)} />;
     }
 
     switch (tab) {
@@ -118,16 +118,17 @@ function JournalShell({ userEmail }: { userEmail: string }) {
             setFrom={setDashFrom}
             to={dashTo}
             setTo={setDashTo}
+            theme={theme}
           />
         );
       case "log":      return <TradeLogView onEditTrade={(id) => { goTab("add"); setEditTradeId(id); }} />;
       case "add":      return <AddTradeView editTradeId={editTradeId} onDone={(blewUp?: boolean) => { setEditTradeId(null); if (blewUp) { fireBlowup(); goTab("blown"); } else goTab("dash"); }} onCsvImport={() => setCsvMode(true)} />;
       case "accts":    return <AccountsView onOpenAcct={(id) => setAcctDashId(id)} />;
       case "settings": return <SettingsView theme={theme} onToggleTheme={toggleTheme} />;
-      case "blown":    return <BlownView />;
+      case "blown":    return <BlownView theme={theme} />;
       case "strats":   return <StrategiesView />;
       case "notes":    return <NotesView />;
-      case "report":   return <ReportView />;
+      case "report":   return <ReportView theme={theme} />;
       default:         return null;
     }
   };
@@ -141,6 +142,7 @@ function JournalShell({ userEmail }: { userEmail: string }) {
           onToggleTheme={toggleTheme}
           onCsvImport={goCsv}
           onHome={() => goTab("dash")}
+          onLogTrade={() => goTab("add")}
         />
 
         <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>

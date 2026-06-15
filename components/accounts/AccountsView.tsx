@@ -89,11 +89,13 @@ function acctWinRate(a: Account, trades: any[]): { wr: number; w: number; n: num
 
 // ── Path bar ─────────────────────────────────────────────────
 function PathBar({ a, pnl }: { a: Account; pnl: number }) {
+  const { db } = useDB();
   if (!a.dd && !a.target) return null;
   const lo = -(a.dd ?? 0), hi = a.target ?? 0;
   if (hi <= lo) return null;
   let pct = (pnl - lo) / (hi - lo) * 100;
   pct = Math.max(2, Math.min(98, pct));
+  const marker = db.settings?.emoji || "😮‍💨";
   return (
     <div style={{ margin: "12px 0 8px" }}>
       <div style={{ height: 6, background: "var(--panel)", borderRadius: 99, position: "relative", overflow: "visible" }}>
@@ -101,7 +103,7 @@ function PathBar({ a, pnl }: { a: Account; pnl: number }) {
           background: "linear-gradient(90deg, var(--red), var(--green))", borderRadius: 99 }} />
         <div style={{ position: "absolute", top: "50%", left: `${pct}%`, transform: "translate(-50%,-50%)",
           fontSize: 14, lineHeight: 1, filter: "drop-shadow(0 1px 2px rgba(0,0,0,.6))" }}>
-          {/* emoji marker */}😮‍💨
+          {marker}
         </div>
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 10 }}>

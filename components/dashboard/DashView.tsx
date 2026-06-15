@@ -5,20 +5,10 @@ import { useDB } from "@/context/DBContext";
 import {
   fmt, filteredTrades, calcDashStats, legNet, inDateRange, type FilteredTrade,
 } from "@/lib/db";
+import { chartColors } from "@/lib/chartTheme";
 
 const DOWS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const PALETTE = ["#26d07c","#3b82c4","#d4a948","#9b6bd4","#e8825a","#5ac8c8","#c85a9b","#7c8aef"];
-
-// V1 base chart options
-const BASE_OPTS = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: { legend: { labels: { color: "#e6edf3" } } },
-  scales: {
-    x: { grid: { color: "#1e2733" }, ticks: { color: "#7d8896" } },
-    y: { grid: { color: "#1e2733" }, ticks: { color: "#7d8896" } },
-  },
-};
 
 function useChartJS() {
   const [ready, setReady] = useState(false);
@@ -158,6 +148,7 @@ interface DashViewProps {
   setFrom: (v: string) => void;
   to: string;
   setTo: (v: string) => void;
+  theme?: "dark" | "light";
 }
 
 export default function DashView({
@@ -166,9 +157,22 @@ export default function DashView({
   showBlown, setShowBlown,
   from, setFrom,
   to, setTo,
+  theme = "dark",
 }: DashViewProps) {
   const { db } = useDB();
   const chartReady = useChartJS();
+
+  // Theme-aware chart options (soft gridlines in light mode)
+  const C = chartColors(theme);
+  const baseOpts = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { labels: { color: C.legend } } },
+    scales: {
+      x: { grid: { color: C.grid }, ticks: { color: C.tick } },
+      y: { grid: { color: C.grid }, ticks: { color: C.tick } },
+    },
+  };
 
   const [chipsOpen, setChipsOpen] = useState(false);
 
@@ -195,7 +199,7 @@ export default function DashView({
       labels: stats.equityCurve.map((_, i) => i + 1),
       datasets: [{ data: stats.equityCurve, borderColor: "#26d07c", backgroundColor: "rgba(38,208,124,.1)", fill: true, tension: .25, pointRadius: 2, borderWidth: 2 }],
     },
-    options: { ...BASE_OPTS, plugins: { ...BASE_OPTS.plugins, legend: { display: false } } },
+    options: { ...baseOpts, plugins: { ...baseOpts.plugins, legend: { display: false } } },
   } : null;
 
   const setupConfig = chartReady ? {
@@ -204,7 +208,7 @@ export default function DashView({
       labels: stats.setupLabels,
       datasets: [{ data: stats.setupWr, backgroundColor: stats.setupLabels.map((_, i) => PALETTE[i % PALETTE.length]), borderRadius: 6 }],
     },
-    options: { ...BASE_OPTS, plugins: { ...BASE_OPTS.plugins, legend: { display: false } }, scales: { ...BASE_OPTS.scales, y: { ...BASE_OPTS.scales.y, max: 100 } } },
+    options: { ...baseOpts, plugins: { ...baseOpts.plugins, legend: { display: false } }, scales: { ...baseOpts.scales, y: { ...baseOpts.scales.y, max: 100 } } },
   } : null;
 
   const gradeConfig = chartReady ? {
@@ -213,7 +217,7 @@ export default function DashView({
       labels: ["A+", "A", "B"],
       datasets: [{ data: stats.gradeExp, backgroundColor: ["#26d07c","#3b82c4","#d4a948"], borderRadius: 6 }],
     },
-    options: { ...BASE_OPTS, plugins: { ...BASE_OPTS.plugins, legend: { display: false } } },
+    options: { ...baseOpts, plugins: { ...baseOpts.plugins, legend: { display: false } } },
   } : null;
 
   const acctConfig = chartReady ? {
@@ -222,7 +226,7 @@ export default function DashView({
       labels: stats.acctLabels,
       datasets: [{ data: stats.acctPnl, backgroundColor: stats.acctPnl.map((v) => v >= 0 ? "#26d07c" : "#f0556d"), borderRadius: 6 }],
     },
-    options: { ...BASE_OPTS, plugins: { ...BASE_OPTS.plugins, legend: { display: false } } },
+    options: { ...baseOpts, plugins: { ...baseOpts.plugins, legend: { display: false } } },
   } : null;
 
   return (

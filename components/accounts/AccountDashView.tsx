@@ -9,9 +9,9 @@ import {
   type PhaseVals,
 } from "@/lib/db";
 import type { Account, Phase, DDType, PhaseKind } from "@/types/journal";
+import { chartColors } from "@/lib/chartTheme";
 
 const DOW_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const CG = { grid: { color: "#1e2733" }, ticks: { color: "#7d8896" } };
 const BASE_OPTS = { responsive: true, maintainAspectRatio: false, animation: { duration: 250 } };
 
 const INPUT: React.CSSProperties = {
@@ -82,7 +82,7 @@ interface ModalState {
   intro: string;
 }
 
-export default function AccountDashView({ acctId, onBack }: { acctId: string; onBack: () => void }) {
+export default function AccountDashView({ acctId, onBack, theme = "dark" }: { acctId: string; onBack: () => void; theme?: "dark" | "light" }) {
   const { db, save } = useDB();
   const chartReady = useChartJS();
 
@@ -127,6 +127,8 @@ export default function AccountDashView({ acctId, onBack }: { acctId: string; on
   // Charts
   useEffect(() => {
     if (!chartReady || !a) return;
+    const C = chartColors(theme);
+    const cg = { grid: { color: C.grid }, ticks: { color: C.tick } };
     const phase = phaseId ? phaseById(a, phaseId) : activePhase(a);
     const { series, start } = dailyBalance(db, a, phaseId, from, to);
     const target = phase ? phase.target || 0 : a.target || 0;
@@ -142,24 +144,24 @@ export default function AccountDashView({ acctId, onBack }: { acctId: string; on
     if (targetBal != null) datasets.push({ label: "Target", data: labels.map(() => targetBal), borderColor: "#3b82c4", borderDash: [5, 4], pointRadius: 0, borderWidth: 1.5, fill: false });
     if (ddArr.length) datasets.push({ label: ddtype === "static" ? "Max DD" : ddtype === "eod" ? "Max DD (EOD trail)" : "Max DD (intraday trail)", data: ddArr.map((v) => +v.toFixed(0)), borderColor: "#f0556d", borderDash: [5, 4], pointRadius: 0, borderWidth: 1.5, fill: false });
     if (dllRaw) datasets.push({ label: "Daily limit", data: series.map((c) => +(c.open - dllRaw).toFixed(0)), borderColor: "#d4a948", borderDash: [2, 3], pointRadius: 0, borderWidth: 1.5, fill: false });
-    mkChart("ad-equity", { type: "line", data: { labels, datasets }, options: { ...BASE_OPTS, plugins: { legend: { display: true, labels: { color: "#8a93a3", font: { size: 10 }, boxWidth: 12 } } }, scales: { x: { ...CG, ticks: { ...CG.ticks, maxTicksLimit: 10 } }, y: CG } } });
+    mkChart("ad-equity", { type: "line", data: { labels, datasets }, options: { ...BASE_OPTS, plugins: { legend: { display: true, labels: { color: C.legend, font: { size: 10 }, boxWidth: 12 } } }, scales: { x: { ...cg, ticks: { ...cg.ticks, maxTicksLimit: 10 } }, y: cg } } });
 
     const palette = ["#26d07c", "#3b82c4", "#d4a948", "#9b6bd4", "#e8825a", "#5ac8c8", "#c85a9b", "#7c8aef"];
     const setups = [...new Set(T.map((t) => t.setup))].filter(Boolean) as string[];
     const swr = setups.map((s) => { const g = T.filter((t) => t.setup === s); return g.length ? Math.round((g.filter((t) => t._pnl > 0).length / g.length) * 100) : 0; });
-    mkChart("ad-setup", { type: "bar", data: { labels: setups.map((s) => s.length > 10 ? s.slice(0, 9) + "…" : s), datasets: [{ data: swr, backgroundColor: setups.map((_, i) => palette[i % palette.length]), borderRadius: 6 }] }, options: { ...BASE_OPTS, plugins: { legend: { display: false } }, scales: { x: CG, y: { ...CG, max: 100 } } } });
+    mkChart("ad-setup", { type: "bar", data: { labels: setups.map((s) => s.length > 10 ? s.slice(0, 9) + "…" : s), datasets: [{ data: swr, backgroundColor: setups.map((_, i) => palette[i % palette.length]), borderRadius: 6 }] }, options: { ...BASE_OPTS, plugins: { legend: { display: false } }, scales: { x: cg, y: { ...cg, max: 100 } } } });
 
     const grades = ["A+", "A", "B"];
     const gexp = grades.map((gr) => { const r = T.filter((t) => t.grade === gr).map((t) => parseFloat((t as any).r)).filter((v) => !isNaN(v)); return r.length ? +(r.reduce((x, y) => x + y, 0) / r.length).toFixed(2) : 0; });
-    mkChart("ad-grade", { type: "bar", data: { labels: grades, datasets: [{ data: gexp, backgroundColor: ["#26d07c", "#3b82c4", "#d4a948"], borderRadius: 6 }] }, options: { ...BASE_OPTS, plugins: { legend: { display: false } }, scales: { x: CG, y: CG } } });
+    mkChart("ad-grade", { type: "bar", data: { labels: grades, datasets: [{ data: gexp, backgroundColor: ["#26d07c", "#3b82c4", "#d4a948"], borderRadius: 6 }] }, options: { ...BASE_OPTS, plugins: { legend: { display: false } }, scales: { x: cg, y: cg } } });
 
     const dowPnl = [0, 0, 0, 0, 0, 0, 0], dowN = [0, 0, 0, 0, 0, 0, 0];
     T.forEach((t) => { const d = new Date(t.date + "T00:00").getDay(); dowPnl[d] += t._pnl; dowN[d]++; });
     const dowIdx = [1, 2, 3, 4, 5].filter((i) => dowN[i] > 0).concat([0, 6].filter((i) => dowN[i] > 0));
     const col = (v: number) => v >= 0 ? "#26d07c" : "#f0556d";
-    mkChart("ad-dow", { type: "bar", data: { labels: dowIdx.map((i) => DOW_NAMES[i].slice(0, 3)), datasets: [{ data: dowIdx.map((i) => +dowPnl[i].toFixed(0)), backgroundColor: dowIdx.map((i) => col(dowPnl[i])), borderRadius: 6 }] }, options: { ...BASE_OPTS, plugins: { legend: { display: false } }, scales: { x: CG, y: CG } } });
+    mkChart("ad-dow", { type: "bar", data: { labels: dowIdx.map((i) => DOW_NAMES[i].slice(0, 3)), datasets: [{ data: dowIdx.map((i) => +dowPnl[i].toFixed(0)), backgroundColor: dowIdx.map((i) => col(dowPnl[i])), borderRadius: 6 }] }, options: { ...BASE_OPTS, plugins: { legend: { display: false } }, scales: { x: cg, y: cg } } });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chartReady, acctId, phaseId, from, to, db.trades, db.accounts]);
+  }, [chartReady, theme, acctId, phaseId, from, to, db.trades, db.accounts]);
 
   if (!a) {
     return (

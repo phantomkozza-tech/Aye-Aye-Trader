@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useDB } from "@/context/DBContext";
 import { fmt, fmtDur, legNet, legComm, today, evalDrawdownSim as evalDrawdownSimCore } from "@/lib/db";
+import { chartColors } from "@/lib/chartTheme";
 import type { JournalDB, Account, Trade, TradeLeg, Strategy } from "@/types/journal";
 
 // ─────────────────────────────────────────────────────────────
@@ -36,7 +37,6 @@ const BASE_OPTS = {
   responsive: true, maintainAspectRatio: false,
   plugins: { legend: { labels: { color: "#e6edf3" } } },
 };
-const CG = { grid: { color: "#1e2733" }, ticks: { color: "#7d8896" } };
 
 // ─────────────────────────────────────────────────────────────
 // Utilities (mirrors V1 helpers)
@@ -379,7 +379,7 @@ function mkChart(id: string, cfg: any) {
 // ─────────────────────────────────────────────────────────────
 // Sub-tab: Performance
 // ─────────────────────────────────────────────────────────────
-function PerfView({ T, chartReady }: { T: FilteredTrade[]; chartReady: boolean }) {
+function PerfView({ T, chartReady, theme = "dark" }: { T: FilteredTrade[]; chartReady: boolean; theme?: "dark" | "light" }) {
   const dowPnl = [0,0,0,0,0,0,0], dowN = [0,0,0,0,0,0,0];
   T.forEach(t => { const d = new Date(t.date+"T00:00").getDay(); dowPnl[d]+=t._pnl; dowN[d]++; });
   const dowIdx = [1,2,3,4,5].filter(i=>dowN[i]>0).concat([0,6].filter(i=>dowN[i]>0));
@@ -474,11 +474,13 @@ function PerfView({ T, chartReady }: { T: FilteredTrade[]; chartReady: boolean }
 
   useEffect(() => {
     if (!chartReady || !T.length) return;
+    const C = chartColors(theme);
+    const cg = { grid: { color: C.grid }, ticks: { color: C.tick } };
     // Drawdown
     const sortedT = [...T].sort((a,b)=>a.date.localeCompare(b.date));
     let cum=0, peak=0; const pts: number[]=[], dlabels: string[]=[];
     sortedT.forEach(t=>{cum+=t._pnl;if(cum>peak)peak=cum;pts.push(+(cum-peak).toFixed(0));dlabels.push(t.date);});
-    mkChart("r-drawdown",{type:"line",data:{labels:dlabels,datasets:[{data:pts,borderColor:"#f0556d",backgroundColor:"rgba(240,85,109,.12)",fill:true,tension:.15,pointRadius:0,borderWidth:2}]},options:{...BASE_OPTS,plugins:{legend:{display:false}},scales:{x:{...CG,ticks:{display:false}},y:CG}}});
+    mkChart("r-drawdown",{type:"line",data:{labels:dlabels,datasets:[{data:pts,borderColor:"#f0556d",backgroundColor:"rgba(240,85,109,.12)",fill:true,tension:.15,pointRadius:0,borderWidth:2}]},options:{...BASE_OPTS,plugins:{legend:{display:false}},scales:{x:{...cg,ticks:{display:false}},y:cg}}});
     // Duration
     const wins2=T.filter(t=>t._pnl>0),losses2=T.filter(t=>t._pnl<0);
     const durs: {min:number;win:boolean}[]=[];
@@ -491,18 +493,18 @@ function PerfView({ T, chartReady }: { T: FilteredTrade[]; chartReady: boolean }
         const buckets=[["under 1m",0,1],["1–2m",1,2],["2–5m",2,5],["5–10m",5,10],["10–30m",10,30],["30m–1h",30,60],["1–4h",60,240],["4h+",240,Infinity]] as [string,number,number][];
         const winData=buckets.map(()=>0),lossData=buckets.map(()=>0);
         durs.forEach(d=>{const bi=buckets.findIndex(b=>d.min>=b[1]&&d.min<b[2]);if(bi>=0){if(d.win)winData[bi]++;else lossData[bi]++;}});
-        mkChart("r-dur",{type:"bar",data:{labels:buckets.map(b=>b[0]),datasets:[{label:"Wins",data:winData,backgroundColor:"#26d07c",borderRadius:4},{label:"Losses",data:lossData,backgroundColor:"#f0556d",borderRadius:4}]},options:{...BASE_OPTS,indexAxis:"y",plugins:{legend:{display:true,labels:{color:"#8a93a3",font:{size:10}}}},scales:{x:{...CG,stacked:true},y:{...CG,stacked:true}}}});
+        mkChart("r-dur",{type:"bar",data:{labels:buckets.map(b=>b[0]),datasets:[{label:"Wins",data:winData,backgroundColor:"#26d07c",borderRadius:4},{label:"Losses",data:lossData,backgroundColor:"#f0556d",borderRadius:4}]},options:{...BASE_OPTS,indexAxis:"y",plugins:{legend:{display:true,labels:{color:C.legend,font:{size:10}}}},scales:{x:{...cg,stacked:true},y:{...cg,stacked:true}}}});
       }
     }
     // Strategy
-    mkChart("r-strat",{type:"bar",data:{labels:byStrat.map(s=>s.name.length>12?s.name.slice(0,11)+"…":s.name),datasets:[{data:byStrat.map(s=>+s.pnl.toFixed(0)),backgroundColor:byStrat.map(s=>col(s.pnl)),borderRadius:6}]},options:{...BASE_OPTS,plugins:{legend:{display:false}},scales:{x:CG,y:CG}}});
+    mkChart("r-strat",{type:"bar",data:{labels:byStrat.map(s=>s.name.length>12?s.name.slice(0,11)+"…":s.name),datasets:[{data:byStrat.map(s=>+s.pnl.toFixed(0)),backgroundColor:byStrat.map(s=>col(s.pnl)),borderRadius:6}]},options:{...BASE_OPTS,plugins:{legend:{display:false}},scales:{x:cg,y:cg}}});
     // DOW
-    mkChart("r-dow",{type:"bar",data:{labels:dowIdx.map(i=>DOW_NAMES[i].slice(0,3)),datasets:[{data:dowIdx.map(i=>+dowPnl[i].toFixed(0)),backgroundColor:dowIdx.map(i=>col(dowPnl[i])),borderRadius:6}]},options:{...BASE_OPTS,plugins:{legend:{display:false}},scales:{x:CG,y:CG}}});
+    mkChart("r-dow",{type:"bar",data:{labels:dowIdx.map(i=>DOW_NAMES[i].slice(0,3)),datasets:[{data:dowIdx.map(i=>+dowPnl[i].toFixed(0)),backgroundColor:dowIdx.map(i=>col(dowPnl[i])),borderRadius:6}]},options:{...BASE_OPTS,plugins:{legend:{display:false}},scales:{x:cg,y:cg}}});
     // Grade
-    mkChart("r-grade",{type:"bar",data:{labels:grades,datasets:[{data:byGrade.map(v=>+v.toFixed(0)),backgroundColor:byGrade.map(col),borderRadius:6}]},options:{...BASE_OPTS,plugins:{legend:{display:false}},scales:{x:CG,y:CG}}});
+    mkChart("r-grade",{type:"bar",data:{labels:grades,datasets:[{data:byGrade.map(v=>+v.toFixed(0)),backgroundColor:byGrade.map(col),borderRadius:6}]},options:{...BASE_OPTS,plugins:{legend:{display:false}},scales:{x:cg,y:cg}}});
     // Instrument
-    mkChart("r-inst",{type:"bar",data:{labels:insts,datasets:[{data:byInst.map(v=>+v.toFixed(0)),backgroundColor:byInst.map(col),borderRadius:6}]},options:{...BASE_OPTS,plugins:{legend:{display:false}},scales:{x:CG,y:CG}}});
-  }, [chartReady, JSON.stringify(T.map(t=>({d:t.date,p:t._pnl})))]);
+    mkChart("r-inst",{type:"bar",data:{labels:insts,datasets:[{data:byInst.map(v=>+v.toFixed(0)),backgroundColor:byInst.map(col),borderRadius:6}]},options:{...BASE_OPTS,plugins:{legend:{display:false}},scales:{x:cg,y:cg}}});
+  }, [chartReady, theme, JSON.stringify(T.map(t=>({d:t.date,p:t._pnl})))]);
 
   const avgWin  = T.filter(t=>t._pnl>0).reduce((a,t)=>a+t._pnl,0) / (T.filter(t=>t._pnl>0).length||1);
   const avgLoss = T.filter(t=>t._pnl<0).reduce((a,t)=>a+t._pnl,0) / (T.filter(t=>t._pnl<0).length||1);
@@ -1194,7 +1196,7 @@ function RoadmapPanel({ db, a, pct, setPct }: { db: JournalDB; a: Account; pct: 
 // ─────────────────────────────────────────────────────────────
 // Main ReportView
 // ─────────────────────────────────────────────────────────────
-export default function ReportView() {
+export default function ReportView({ theme = "dark" }: { theme?: "dark" | "light" }) {
   const { db, save } = useDB();
   const chartReady = useChartJS();
   const [sub, setSub]     = useState<SubTab>("perf");
@@ -1225,7 +1227,7 @@ export default function ReportView() {
       return <StratDetailView db={db} T={T} stratId={stratId} save={save} onBack={()=>setStratId(null)}/>;
     }
     switch(sub) {
-      case "perf":   return <PerfView T={T} chartReady={chartReady}/>;
+      case "perf":   return <PerfView T={T} chartReady={chartReady} theme={theme}/>;
       case "system": return <SystemView db={db} T={T} save={save} onOpenStrat={id=>{setStratId(id);}}/>;
       case "eval":   return <EvalView db={db}/>;
       case "psych":  return <PsychView db={db} T={T}/>;

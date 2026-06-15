@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useDB } from "@/context/DBContext";
 import { fmt, legNet, legComm, today, uid } from "@/lib/db";
+import { chartColors } from "@/lib/chartTheme";
 import type { Account, Phase } from "@/types/journal";
 
 // ── Phase helpers (duplicated locally to avoid circular deps) ──
@@ -72,8 +73,7 @@ function blownInfo(a: Account, trades: any[]): BlownInfo {
 }
 
 // ── Chart canvas ─────────────────────────────────────────────
-function useChartJS() {
-  const [ready, setReady] = useState(false);
+function useChartJS() {  const [ready, setReady] = useState(false);
   useEffect(() => {
     if ((window as any).Chart) { setReady(true); return; }
     const s = document.createElement("script");
@@ -83,16 +83,6 @@ function useChartJS() {
   }, []);
   return ready;
 }
-
-const BASE_OPTS = {
-  responsive: true, maintainAspectRatio: false,
-  animation: { duration: 300 },
-  plugins: { legend: { display: false } },
-  scales: {
-    x: { grid: { color: "rgba(255,255,255,.06)" }, ticks: { color: "#7a8a9a", font: { size: 11 } } },
-    y: { grid: { color: "rgba(255,255,255,.06)" }, ticks: { color: "#7a8a9a", font: { size: 11 }, precision: 0 } },
-  },
-};
 
 function ChartCanvas({ id, config, ready }: { id: string; config: any; ready: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -180,9 +170,20 @@ function BlownCard({ info, onReset }: { info: BlownInfo; onReset: () => void }) 
 }
 
 // ── Main view ────────────────────────────────────────────────
-export default function BlownView() {
+export default function BlownView({ theme = "dark" }: { theme?: "dark" | "light" }) {
   const { db, save } = useDB();
   const chartReady = useChartJS();
+
+  const C = chartColors(theme);
+  const baseOpts = {
+    responsive: true, maintainAspectRatio: false,
+    animation: { duration: 300 },
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: C.grid }, ticks: { color: C.tick, font: { size: 11 } } },
+      y: { grid: { color: C.grid }, ticks: { color: C.tick, font: { size: 11 }, precision: 0 } },
+    },
+  };
 
   const [selAccts, setSelAccts]   = useState<Set<string>>(new Set());
   const [chipsOpen, setChipsOpen] = useState(false);
@@ -248,7 +249,7 @@ export default function BlownView() {
   const gradeConfig = chartReady && infos.length ? {
     type: "bar",
     data: { labels: grades, datasets: [{ data: gradeData, backgroundColor: ["#26d07c","#3b82c4","#d4a948"], borderRadius: 6 }] },
-    options: BASE_OPTS,
+    options: baseOpts,
   } : null;
 
   const setupConfig = chartReady && infos.length ? {
@@ -257,7 +258,7 @@ export default function BlownView() {
       labels: setupKeys.map((s) => s.length > 10 ? s.slice(0, 9) + "…" : s),
       datasets: [{ data: setupData, backgroundColor: "#f0556d", borderRadius: 6 }],
     },
-    options: BASE_OPTS,
+    options: baseOpts,
   } : null;
 
   // Reset handler

@@ -127,7 +127,7 @@ function JournalShell({ userEmail }: { userEmail: string }) {
       case "settings": return <SettingsView theme={theme} onToggleTheme={toggleTheme} />;
       case "blown":    return <BlownView theme={theme} />;
       case "strats":   return <StrategiesView />;
-      case "notes":    return <NotesView />;
+      case "notes":    return <NotesView theme={theme} />;
       case "report":   return <ReportView theme={theme} />;
       default:         return null;
     }

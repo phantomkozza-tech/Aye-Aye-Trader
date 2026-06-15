@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Component, type ReactNode } from "react";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import { useDB } from "@/context/DBContext";
@@ -40,10 +40,29 @@ const INPUT: React.CSSProperties = {
   width: "100%", boxSizing: "border-box",
 };
 
+// Document "paper" look — a centered page with a soft shadow over a neutral tray.
+const PAPER_TRAY: React.CSSProperties = {
+  flex: 1, background: "var(--bg)", borderRadius: 14, border: "1px solid var(--line)",
+  padding: "26px 22px", minHeight: 1180, display: "flex", justifyContent: "center",
+};
+const PAPER: React.CSSProperties = {
+  width: "100%", maxWidth: 840, alignSelf: "flex-start",
+  background: "var(--panel)", borderRadius: 12, border: "1px solid var(--line)",
+  boxShadow: "0 10px 34px rgba(0,0,0,.16), 0 2px 6px rgba(0,0,0,.06)", overflow: "hidden",
+};
+const PAPER_BAR: React.CSSProperties = {
+  padding: "10px 30px", borderBottom: "1px solid var(--line)",
+  fontSize: 11, color: "var(--mut)", display: "flex", gap: 16, alignItems: "center",
+};
+const HINT_KBD: React.CSSProperties = {
+  background: "var(--panel2)", border: "1px solid var(--line)", borderRadius: 4,
+  padding: "1px 6px", fontSize: 10, fontFamily: "ui-monospace, monospace",
+};
+
 // ─── BlockNote theme ─────────────────────────────────────────
 const DARK_THEME = {
   colors: {
-    editor:  { text: "#e6edf3", background: "#0f141c" },
+    editor:  { text: "#e6edf3", background: "#121821" },
     menu:    { text: "#e6edf3", background: "#121821" },
     tooltip: { text: "#e6edf3", background: "#121821" },
     hovered: { text: "#e6edf3", background: "#1e2733" },
@@ -66,6 +85,61 @@ const DARK_THEME = {
   borderRadius: 8,
   fontFamily: '"Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
 } as const;
+
+// Light editor theme so the page follows the app's light mode (paper look)
+const LIGHT_THEME = {
+  colors: {
+    editor:  { text: "#243040", background: "#ffffff" },
+    menu:    { text: "#243040", background: "#ffffff" },
+    tooltip: { text: "#243040", background: "#ffffff" },
+    hovered: { text: "#243040", background: "#eef1f6" },
+    selected:{ text: "#243040", background: "#16a34a1f" },
+    disabled:{ text: "#9ca3af", background: "#f6f8fb" },
+    shadow: "#c9d2de", border: "#e3e7ee", sideMenu: "#9aa3b0",
+    highlights: {
+      gray:  { text: "#4b5563", background: "#eef1f5" },
+      brown: { text: "#92560a", background: "#f7ecd9" },
+      red:   { text: "#b91c3c", background: "#fde8ec" },
+      orange:{ text: "#b45309", background: "#fbeadd" },
+      yellow:{ text: "#a16207", background: "#fdf3d3" },
+      green: { text: "#15803d", background: "#dcfce7" },
+      blue:  { text: "#1d4ed8", background: "#dbeafe" },
+      purple:{ text: "#7c3aed", background: "#ede9fe" },
+      pink:  { text: "#be185d", background: "#fce7f3" },
+      teal:  { text: "#0f766e", background: "#d5f5f2" },
+    },
+  },
+  borderRadius: 8,
+  fontFamily: '"Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
+} as const;
+
+// ─── Crash-safe editor ────────────────────────────────────────
+// Re-enables BlockNote's drag handle (the ⠿ six-dot grip in the gutter that
+// moves blocks). If the side menu ever throws on this React/BlockNote combo,
+// the boundary falls back to the editor without the handle so the Notes page
+// never white-screens.
+class EditorBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch() { /* swallow — fallback already rendered */ }
+  render() { return this.state.failed ? this.props.fallback : this.props.children; }
+}
+
+function NoteEditor({
+  editor, themeObj, editable = true, minHeight,
+}: {
+  editor: any; themeObj: any; editable?: boolean; minHeight: number;
+}) {
+  // Horizontal padding leaves room in the gutter for the drag handle.
+  const style: React.CSSProperties = { minHeight, padding: "16px 30px" };
+  return (
+    <EditorBoundary
+      fallback={<BlockNoteView editor={editor} theme={themeObj} sideMenu={false} editable={editable} style={style} />}
+    >
+      <BlockNoteView editor={editor} theme={themeObj} editable={editable} style={style} />
+    </EditorBoundary>
+  );
+}
 
 // ─── Deep-copy blocks (for stamping templates into notes) ─────
 function cloneBlocks(blocks: any[]): any[] {
@@ -128,54 +202,16 @@ function SideRow({
 }
 
 // ─────────────────────────────────────────────────────────────
-// RICH TEXT EDITOR (shared by note detail + template editor)
-// ─────────────────────────────────────────────────────────────
-function RichEditor({
-  initialBlocks, onChange,
-}: {
-  initialBlocks?: any[];
-  onChange?: () => void;
-}) {
-  const [mounted, setMounted] = useState(false);
-  const editor = useCreateBlockNote({ initialContent: initialBlocks });
-
-  // Wait for full client mount before rendering BlockNoteView.
-  // editor.portalElement is only set after the DOM is ready — rendering
-  // BlockNoteView before that throws "Portal element not found".
-  useEffect(() => { setMounted(true); }, []);
-  useEffect(() => {
-    if (onChange) return editor.onChange(() => onChange());
-  }, [editor, onChange]);
-
-  if (!mounted) {
-    return (
-      <div style={{ minHeight: 340, display: "flex", alignItems: "center",
-        justifyContent: "center", color: "var(--dim)", fontSize: 13 }}>
-        Loading editor…
-      </div>
-    );
-  }
-
-  return (
-    <BlockNoteView
-      editor={editor}
-      theme={DARK_THEME as any}
-      sideMenu={false}
-      style={{ minHeight: 340, padding: "4px 0" }}
-    />
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
 // NOTE EDITOR PANEL
 // ─────────────────────────────────────────────────────────────
 function NoteEditorPanel({
-  note, onSave, onDelete, onSaveAsTemplate,
+  note, onSave, onDelete, onSaveAsTemplate, themeObj,
 }: {
   note: Note;
   onSave: (updated: Note) => void;
   onDelete: (id: string) => void;
   onSaveAsTemplate: (note: Note, editorDoc: any[]) => void;
+  themeObj: any;
 }) {
   const [title, setTitle]     = useState(note.title ?? "");
   const [link, setLink]       = useState(note.link ?? "");
@@ -192,6 +228,7 @@ function NoteEditorPanel({
   const editor = useCreateBlockNote({ initialContent: initialBlocks });
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
+  useEffect(() => editor.onChange(() => setDirty(true)), [editor]);
   useEffect(() => {
     setTitle(note.title ?? ""); setLink(note.link ?? ""); setDate(note.date);
     setDirty(false); setEditMeta(false);
@@ -252,15 +289,22 @@ function NoteEditorPanel({
         </div>
       )}
 
-      {/* Editor */}
-      <div style={{ flex: 1, border: "1px solid var(--line)", borderRadius: 10, overflow: "hidden", background: "var(--panel2)", minHeight: 1122 }}>
-        <div style={{ padding: "6px 16px", borderBottom: "1px solid var(--line)", fontSize: 11, color: "var(--dim)", display: "flex", gap: 16, alignItems: "center" }}>
-          <span>Type <kbd style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 4, padding: "1px 5px", fontSize: 10 }}>/</kbd> for blocks</span>
-          <span>Select text to format</span>
-          <span style={{ marginLeft: "auto", color: dirty ? "var(--gold)" : "var(--dim)" }}>{dirty ? "● Unsaved" : "Saved"}</span>
+      {/* Editor — centered paper document with drag handles */}
+      <div style={PAPER_TRAY}>
+        <div style={PAPER}>
+          <div style={PAPER_BAR}>
+            <span>Type <kbd style={HINT_KBD}>/</kbd> for blocks</span>
+            <span>Hover a line for the <b style={{ color: "var(--mut)" }}>⠿</b> handle to drag</span>
+            <span>Select text to format</span>
+            <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 5, color: dirty ? "var(--gold)" : "var(--green)", fontWeight: 600 }}>
+              <span style={{ width: 6, height: 6, borderRadius: 99, background: dirty ? "var(--gold)" : "var(--green)" }} />
+              {dirty ? "Unsaved" : "Saved"}
+            </span>
+          </div>
+          {mounted
+            ? <NoteEditor editor={editor} themeObj={themeObj} minHeight={1000} />
+            : <div style={{ minHeight: 1000, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--dim)", fontSize: 13 }}>Loading editor…</div>}
         </div>
-        <BlockNoteView editor={editor} theme={DARK_THEME as any} sideMenu={false} style={{ minHeight: 1080, padding: "12px 0", display: mounted ? undefined : "none" }} />
-        {!mounted && <div style={{ minHeight: 1080, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--dim)", fontSize: 13 }}>Loading editor…</div>}
       </div>
     </div>
   );
@@ -270,12 +314,13 @@ function NoteEditorPanel({
 // TEMPLATE EDITOR PANEL
 // ─────────────────────────────────────────────────────────────
 function TemplateEditorPanel({
-  template, onSave, onDelete, onUse,
+  template, onSave, onDelete, onUse, themeObj,
 }: {
   template: NoteTemplate;
   onSave: (updated: NoteTemplate) => void;
   onDelete: (id: string) => void;
   onUse: (template: NoteTemplate) => void;
+  themeObj: any;
 }) {
   const [name, setName]           = useState(template.name);
   const [description, setDesc]    = useState(template.description ?? "");
@@ -343,16 +388,25 @@ function TemplateEditorPanel({
       </div>
 
       {/* Editor — read-only feel for built-ins but still interactive */}
-      <div style={{ flex: 1, border: "1px solid var(--line)", borderRadius: 10, overflow: "hidden", background: "var(--panel2)", minHeight: 1122 }}>
-        <div style={{ padding: "6px 16px", borderBottom: "1px solid var(--line)", fontSize: 11, color: "var(--dim)", display: "flex", gap: 16, alignItems: "center" }}>
-          {isBuiltIn
-            ? <span>Built-in preset — click <b style={{ color: "var(--green)" }}>✦ Use template</b> to stamp it into a new planning day</span>
-            : <><span>Type <kbd style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 4, padding: "1px 5px", fontSize: 10 }}>/</kbd> for blocks</span><span style={{ marginLeft: "auto", color: dirty ? "var(--gold)" : "var(--dim)" }}>{dirty ? "● Unsaved" : "Saved"}</span></>
-          }
+      <div style={PAPER_TRAY}>
+        <div style={PAPER}>
+          <div style={PAPER_BAR}>
+            {isBuiltIn
+              ? <span>Built-in preset — click <b style={{ color: "var(--green)" }}>✦ Use template</b> to stamp it into a new planning day</span>
+              : <>
+                  <span>Type <kbd style={HINT_KBD}>/</kbd> for blocks</span>
+                  <span>Hover a line for the <b style={{ color: "var(--mut)" }}>⠿</b> handle to drag</span>
+                  <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 5, color: dirty ? "var(--gold)" : "var(--green)", fontWeight: 600 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: 99, background: dirty ? "var(--gold)" : "var(--green)" }} />
+                    {dirty ? "Unsaved" : "Saved"}
+                  </span>
+                </>
+            }
+          </div>
+          {mounted
+            ? <NoteEditor editor={editor} themeObj={themeObj} editable={!isBuiltIn} minHeight={1000} />
+            : <div style={{ minHeight: 1000, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--dim)", fontSize: 13 }}>Loading editor…</div>}
         </div>
-        <BlockNoteView editor={editor} theme={DARK_THEME as any} sideMenu={false} style={{ minHeight: 1080, padding: "12px 0", display: mounted ? undefined : "none" }}
-          editable={!isBuiltIn} />
-        {!mounted && <div style={{ minHeight: 1080, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--dim)", fontSize: 13 }}>Loading editor…</div>}
       </div>
     </div>
   );
@@ -509,8 +563,9 @@ function SaveTemplateModal({
 // ─────────────────────────────────────────────────────────────
 type MainTab = "notes" | "templates";
 
-export default function NotesView() {
+export default function NotesView({ theme = "dark" }: { theme?: "dark" | "light" }) {
   const { db, save } = useDB();
+  const themeObj = theme === "light" ? LIGHT_THEME : DARK_THEME;
   const [mainTab, setMainTab]             = useState<MainTab>("notes");
   const [adding, setAdding]               = useState(false);
   const [activeNoteId, setActiveNoteId]   = useState<string | null>(null);
@@ -598,8 +653,13 @@ export default function NotesView() {
   return (
     <div>
       {/* Page header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
-        <h3 style={{ margin: 0 }}>Planning &amp; Notes</h3>
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: "-.3px" }}>Planning &amp; Notes</h2>
+          <p style={{ margin: "4px 0 0", fontSize: 12.5, color: "var(--mut)" }}>
+            Pre-market plans, post-session reviews, and reusable templates — your process, written down.
+          </p>
+        </div>
         <div style={{ display: "flex", gap: 8 }}>
           {onenote && <a className="btn" href={onenote} target="_blank" rel="noopener" style={{ fontSize: 12 }}>⬈ My OneNote</a>}
           {mainTab === "templates" && <button className="btn" onClick={createBlankTemplate}>+ New template</button>}
@@ -685,7 +745,7 @@ export default function NotesView() {
         </div>
 
         {/* ── Right panel ── */}
-        <div style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 12, padding: 22, minHeight: 1200 }}>
+        <div style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 12, padding: 18, minHeight: 1200 }}>
           {mainTab === "notes" ? (
             activeNote ? (
               <NoteEditorPanel
@@ -694,6 +754,7 @@ export default function NotesView() {
                 onSave={updateNote}
                 onDelete={deleteNote}
                 onSaveAsTemplate={(note, blocks) => setSaveTplModal({ note, blocks })}
+                themeObj={themeObj}
               />
             ) : (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 400, color: "var(--dim)", gap: 12 }}>
@@ -710,6 +771,7 @@ export default function NotesView() {
                 onSave={saveUserTemplate}
                 onDelete={deleteUserTemplate}
                 onUse={() => setAdding(true)}
+                themeObj={themeObj}
               />
             ) : (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 400, color: "var(--dim)", gap: 12 }}>

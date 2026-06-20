@@ -39,6 +39,28 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Operator kill switch — if you set profiles.status = 'disabled' in
+  // Supabase, lock that user out of the dashboard. Fails OPEN: any error
+  // (table missing pre-migration, network) lets the user through so the
+  // app never bricks.
+  if (user && request.nextUrl.pathname.startsWith("/dashboard")) {
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("status")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (profile && profile.status === "disabled") {
+        const url = request.nextUrl.clone();
+        url.pathname = "/login";
+        url.searchParams.set("error", "disabled");
+        return NextResponse.redirect(url);
+      }
+    } catch {
+      /* fail open */
+    }
+  }
+
   // Redirect authenticated users away from /login
   if (user && request.nextUrl.pathname === "/login") {
     const url = request.nextUrl.clone();

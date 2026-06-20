@@ -6,6 +6,11 @@
 
 import type { JournalDB } from "@/types/journal";
 
+// ⚠️  TO REMOVE THE "access to ALL your files" WARNING on the Dropbox
+//    consent screen: this is a *Full Dropbox* app. Create a NEW Dropbox
+//    app with "App folder" access (you can't convert an existing one),
+//    then paste its app key below. Paths stay the same — they auto-scope
+//    to /Apps/Aye Aye Trader/. See SETUP.md → "Dropbox" for the steps.
 const DROPBOX_APP_KEY = "311hj348ml0d6l3";
 const DROPBOX_FILE    = "/ayeaye_journal.json";
 const TOK_KEY         = "ayeaye_dbx_token";

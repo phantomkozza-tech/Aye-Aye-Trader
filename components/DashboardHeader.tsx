@@ -13,40 +13,7 @@ interface Props {
   onLogTrade: () => void;
 }
 
-const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
-  <defs>
-    <linearGradient id="hbg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#16352a"/><stop offset="1" stop-color="#0f3d2b"/>
-    </linearGradient>
-    <linearGradient id="hgold" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#e8c876"/><stop offset="1" stop-color="#b08828"/>
-    </linearGradient>
-  </defs>
-  <rect width="100%" height="100%" rx="112" fill="url(#hbg)"/>
-  <g>
-    <rect x="180" y="120" width="20" height="120" rx="3" fill="#f0556d"/>
-    <rect x="187" y="100" width="6" height="160" fill="#f0556d"/>
-    <rect x="246" y="92" width="20" height="150" rx="3" fill="#26d07c"/>
-    <rect x="253" y="74" width="6" height="186" fill="#26d07c"/>
-    <rect x="312" y="140" width="20" height="100" rx="3" fill="#26d07c"/>
-    <rect x="319" y="120" width="6" height="138" fill="#26d07c"/>
-  </g>
-  <g>
-    <path d="M150 248 q0 -56 106 -56 q106 0 106 56 z" fill="#1b6b4a" stroke="#d4a948" stroke-width="6"/>
-    <rect x="202" y="222" width="14" height="32" fill="#d4a948"/>
-    <rect x="296" y="222" width="14" height="32" fill="#d4a948"/>
-    <rect x="146" y="248" width="220" height="118" rx="16" fill="url(#hgold)" stroke="#124d36" stroke-width="6"/>
-    <rect x="146" y="284" width="220" height="14" fill="#124d36"/>
-    <rect x="168" y="248" width="14" height="118" fill="#124d36" opacity="0.9"/>
-    <rect x="330" y="248" width="14" height="118" fill="#124d36" opacity="0.9"/>
-    <rect x="236" y="276" width="40" height="38" rx="6" fill="#124d36"/>
-    <g>
-      <rect x="245" y="282.5" width="22" height="25" rx="2" fill="#1a1a1a"/>
-      <rect x="245" y="290.5" width="22" height="3.5" fill="#e8c876"/>
-      <rect x="253.58" y="297.5" width="4.84" height="10" fill="#e8c876" opacity="0.9"/>
-    </g>
-  </g>
-</svg>`;
+const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%"><rect width="512" height="512" rx="104" fill="#0c1118"/><g transform="translate(56,23) scale(3.33)"><circle cx="60" cy="70" r="54" fill="#121821"/><circle cx="60" cy="70" r="54" fill="none" stroke="#d4a948" stroke-width="5"/><g transform="translate(21,27) scale(0.65)"><g fill="none" stroke="#f3ecd9" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"><circle cx="60" cy="20" r="9" stroke-width="10"/><line x1="60" y1="29" x2="60" y2="110"/><line x1="38" y1="44" x2="82" y2="44"/><path d="M30 86 Q60 122 90 86"/></g><g fill="#f3ecd9" stroke="none"><path d="M30 86 L18 82 L27 72 Z"/><path d="M90 86 L102 82 L93 72 Z"/></g></g><path d="M16 92 C34 92 44 73 60 75 S76 67 78 65" fill="none" stroke="#e8c46a" stroke-width="5" stroke-linecap="round"/><circle cx="60" cy="75" r="3" fill="#e8c46a"/><rect x="78" y="58.5" width="30" height="14" rx="4" fill="#e8c46a"/><text x="93" y="68.4" fill="#0a0e14" font-family="'JetBrains Mono','DejaVu Sans Mono',monospace" font-size="7.4" font-weight="700" letter-spacing="0.6" text-anchor="middle">VWAP</text></g></svg>`;
 
 // V1 status label + color map
 const STATUS_MAP: Record<string, { label: string; color: string; icon: string }> = {
@@ -105,7 +72,7 @@ export default function DashboardHeader({ userEmail, theme, onToggleTheme, onCsv
         <div style={{
           width: 46, height: 46, borderRadius: 10, overflow: "hidden",
           display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: "0 4px 18px rgba(38,208,124,.3)", flexShrink: 0,
+          boxShadow: "0 4px 18px rgba(212,169,72,.3)", flexShrink: 0,
         }} dangerouslySetInnerHTML={{ __html: LOGO_SVG }} />
         <div>
           <h1 style={{ fontSize: 19, fontWeight: 700, letterSpacing: "-0.3px", lineHeight: 1.2 }}>

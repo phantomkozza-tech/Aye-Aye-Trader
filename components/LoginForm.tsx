@@ -40,25 +40,35 @@ export default function LoginForm() {
     const v = validate();
     if (v) { setMessage({ text: v, ok: false }); return; }
     setLoading(true); setMessage(null);
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: `${location.origin}/dashboard` },
-    });
+
+    // 1) Create a pre-confirmed user on the server (no confirmation email).
+    let res: Response;
+    try {
+      res = await fetch("/api/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+    } catch {
+      setLoading(false);
+      setMessage({ text: "Network error. Please try again.", ok: false });
+      return;
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setLoading(false);
+      setMessage({ text: data?.error || "Could not create account.", ok: false });
+      return;
+    }
+
+    // 2) Sign them in.
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
       setMessage({ text: error.message, ok: false });
-    } else if (data.session) {
-      // Email confirmation is off -> straight in.
+    } else {
       router.push("/dashboard");
       router.refresh();
-    } else {
-      // Email confirmation is on -> they must confirm first.
-      setMessage({
-        text: "Account created. Check your email to confirm, then log in.",
-        ok: true,
-      });
-      setMode("login");
     }
   }
 

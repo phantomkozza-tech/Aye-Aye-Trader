@@ -7,6 +7,16 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  async rewrites() {
+    // Serve the static landing page (public/home.html) at "/". Middleware
+    // redirects signed-in users to /dashboard before this applies, so only
+    // logged-out visitors ever reach the landing.
+    return {
+      beforeFiles: [{ source: "/", destination: "/home.html" }],
+      afterFiles: [],
+      fallback: [],
+    };
+  },
   transpilePackages: [
     "@blocknote/core",
     "@blocknote/react",

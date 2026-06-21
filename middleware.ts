@@ -78,6 +78,15 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Root: signed-in users go straight to the cockpit. Logged-out visitors
+  // fall through to the rewrite in next.config (which serves the static
+  // landing page from /public/home.html).
+  if (user && request.nextUrl.pathname === "/") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
+  }
+
   return supabaseResponse;
 }
 

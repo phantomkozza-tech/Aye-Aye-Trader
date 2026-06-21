@@ -19,7 +19,8 @@
     "chart.js": "4.4.9",
     "next": "15.3.6",
     "react": "19.0.0",
-    "react-dom": "19.0.0"
+    "react-dom": "19.0.0",
+    "stripe": "^18.5.0"
   },
   "devDependencies": {
     "@types/node": "22.15.21",

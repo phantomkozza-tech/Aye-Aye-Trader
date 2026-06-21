@@ -4,45 +4,29 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
-type Mode = "magic" | "password";
+type Mode = "login" | "signup";
 
 export default function LoginForm() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [mode, setMode] = useState<Mode>("magic");
+  const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(
-    null
-  );
+  const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
 
-  async function handleMagicLink() {
-    setLoading(true);
-    setMessage(null);
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${location.origin}/dashboard` },
-    });
-    setLoading(false);
-    if (error) {
-      setMessage({ text: error.message, ok: false });
-    } else {
-      setMessage({
-        text: "Check your email — magic link sent.",
-        ok: true,
-      });
-    }
+  function validate(): string | null {
+    if (!email.trim()) return "Enter your email.";
+    if (password.length < 6) return "Password must be at least 6 characters.";
+    return null;
   }
 
-  async function handlePassword() {
-    setLoading(true);
-    setMessage(null);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  async function handleLogin() {
+    const v = validate();
+    if (v) { setMessage({ text: v, ok: false }); return; }
+    setLoading(true); setMessage(null);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
       setMessage({ text: error.message, ok: false });
@@ -51,6 +35,34 @@ export default function LoginForm() {
       router.refresh();
     }
   }
+
+  async function handleSignup() {
+    const v = validate();
+    if (v) { setMessage({ text: v, ok: false }); return; }
+    setLoading(true); setMessage(null);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: `${location.origin}/dashboard` },
+    });
+    setLoading(false);
+    if (error) {
+      setMessage({ text: error.message, ok: false });
+    } else if (data.session) {
+      // Email confirmation is off -> straight in.
+      router.push("/dashboard");
+      router.refresh();
+    } else {
+      // Email confirmation is on -> they must confirm first.
+      setMessage({
+        text: "Account created. Check your email to confirm, then log in.",
+        ok: true,
+      });
+      setMode("login");
+    }
+  }
+
+  const submit = () => (mode === "login" ? handleLogin() : handleSignup());
 
   const inputStyle: React.CSSProperties = {
     width: "100%",
@@ -92,6 +104,16 @@ export default function LoginForm() {
     transition: ".12s",
   });
 
+  const labelStyle: React.CSSProperties = {
+    fontSize: 11,
+    color: "var(--mut)",
+    textTransform: "uppercase",
+    letterSpacing: ".7px",
+    fontWeight: 600,
+    display: "block",
+    marginBottom: 6,
+  };
+
   return (
     <div
       style={{
@@ -113,84 +135,41 @@ export default function LoginForm() {
           gap: 4,
         }}
       >
-        <button style={tabStyle(mode === "magic")} onClick={() => setMode("magic")}>
-          Magic Link
+        <button style={tabStyle(mode === "login")} onClick={() => { setMode("login"); setMessage(null); }}>
+          Log in
         </button>
-        <button
-          style={tabStyle(mode === "password")}
-          onClick={() => setMode("password")}
-        >
-          Password
+        <button style={tabStyle(mode === "signup")} onClick={() => { setMode("signup"); setMessage(null); }}>
+          Sign up
         </button>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div>
-          <label
-            style={{
-              fontSize: 11,
-              color: "var(--mut)",
-              textTransform: "uppercase",
-              letterSpacing: ".7px",
-              fontWeight: 600,
-              display: "block",
-              marginBottom: 6,
-            }}
-          >
-            Email
-          </label>
+          <label style={labelStyle}>Email</label>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             style={inputStyle}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                mode === "magic" ? handleMagicLink() : handlePassword();
-              }
-            }}
+            onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
           />
         </div>
 
-        {mode === "password" && (
-          <div>
-            <label
-              style={{
-                fontSize: 11,
-                color: "var(--mut)",
-                textTransform: "uppercase",
-                letterSpacing: ".7px",
-                fontWeight: 600,
-                display: "block",
-                marginBottom: 6,
-              }}
-            >
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              style={inputStyle}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handlePassword();
-              }}
-            />
-          </div>
-        )}
+        <div>
+          <label style={labelStyle}>Password</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            style={inputStyle}
+            onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+          />
+        </div>
 
-        <button
-          style={btnStyle}
-          disabled={loading}
-          onClick={mode === "magic" ? handleMagicLink : handlePassword}
-        >
-          {loading
-            ? "Loading…"
-            : mode === "magic"
-            ? "Send Magic Link"
-            : "Sign In"}
+        <button style={btnStyle} disabled={loading} onClick={submit}>
+          {loading ? "Loading…" : mode === "login" ? "Log in" : "Create account"}
         </button>
 
         {message && (
@@ -210,13 +189,27 @@ export default function LoginForm() {
       <p
         style={{
           textAlign: "center",
-          fontSize: 11,
+          fontSize: 12,
           color: "var(--dim)",
           marginTop: 20,
           lineHeight: 1.6,
         }}
       >
-        No account yet? Magic link will create one automatically.
+        {mode === "login" ? (
+          <>New here?{" "}
+            <button onClick={() => { setMode("signup"); setMessage(null); }}
+              style={{ background: "none", border: "none", color: "var(--green)", cursor: "pointer", fontSize: 12, fontWeight: 600, padding: 0 }}>
+              Create an account
+            </button>
+          </>
+        ) : (
+          <>Already have an account?{" "}
+            <button onClick={() => { setMode("login"); setMessage(null); }}
+              style={{ background: "none", border: "none", color: "var(--green)", cursor: "pointer", fontSize: 12, fontWeight: 600, padding: 0 }}>
+              Log in
+            </button>
+          </>
+        )}
       </p>
     </div>
   );

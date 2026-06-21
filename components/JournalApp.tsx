@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { DBProvider } from "@/context/DBContext";
+import { DBProvider, useDB } from "@/context/DBContext";
 import DashView from "@/components/dashboard/DashView";
 import AddTradeView from "@/components/add-trade/AddTradeView";
 import AccountsView from "@/components/accounts/AccountsView";
@@ -45,6 +45,7 @@ const TABS: { id: TabId; label: string }[] = [
 const THEME_KEY = "ayeaye_theme";
 
 function JournalShell({ userEmail }: { userEmail: string }) {
+  const { canWrite } = useDB();
   const [tab, setTab] = useState<TabId>("dash");
   const [dayDetail, setDayDetail] = useState<string | null>(null);
   const [csvMode, setCsvMode] = useState(false);
@@ -145,6 +146,42 @@ function JournalShell({ userEmail }: { userEmail: string }) {
           onLogTrade={() => goTab("add")}
         />
 
+        {!canWrite && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+              background: "rgba(229,84,84,0.10)",
+              border: "1px solid var(--red)",
+              borderRadius: 10,
+              padding: "12px 16px",
+              marginBottom: 16,
+            }}
+          >
+            <span style={{ fontSize: 13.5, color: "var(--txt)", lineHeight: 1.5 }}>
+              <b style={{ color: "var(--red)" }}>Read-only.</b> Your subscription has ended —
+              you can view your journal, but logging trades, imports, and edits are paused.
+            </span>
+            <a
+              href="/subscribe"
+              style={{
+                flex: "none",
+                textDecoration: "none",
+                background: "var(--green)",
+                color: "#04140b",
+                fontWeight: 700,
+                fontSize: 13,
+                padding: "9px 16px",
+                borderRadius: 8,
+              }}
+            >
+              Resubscribe
+            </a>
+          </div>
+        )}
         <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
           {TABS.map((t) => (
             <div

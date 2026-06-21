@@ -57,9 +57,11 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(url);
       }
 
-      // No active subscription/trial -> send to the plan picker.
-      const ACTIVE = ["trialing", "active", "past_due"];
-      if (profile && !ACTIVE.includes(profile.plan)) {
+      // Who may load the dashboard at all. 'canceled' is allowed in but the
+      // app renders read-only (see DBContext canWrite). Only users who never
+      // started a subscription (default 'trial') are sent to the plan picker.
+      const CAN_ENTER = ["trialing", "active", "past_due", "canceled"];
+      if (profile && !CAN_ENTER.includes(profile.plan)) {
         const url = request.nextUrl.clone();
         url.pathname = "/subscribe";
         return NextResponse.redirect(url);

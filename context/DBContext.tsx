@@ -1,9 +1,10 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import type { JournalDB } from "@/types/journal";
 import { loadDB, saveDB } from "@/lib/db";
 import { DBX, type DbxStatus } from "@/lib/dropbox";
+import { CLOUD, type CloudStatus } from "@/lib/supabaseStore";
 
 interface DBContextValue {
   db: JournalDB;
@@ -14,6 +15,7 @@ interface DBContextValue {
   dbxConnected: boolean;
   dbxConnect: () => void;
   dbxDisconnect: () => void;
+  cloudStatus: CloudStatus;
 }
 
 const DBContext = createContext<DBContextValue | null>(null);
@@ -22,56 +24,95 @@ export function DBProvider({ children }: { children: React.ReactNode }) {
   const [db, setDBState] = useState<JournalDB | null>(null);
   const [loading, setLoading] = useState(true);
   const [dbxStatus, setDbxStatus] = useState<DbxStatus>("off");
+  const [cloudStatus, setCloudStatus] = useState<CloudStatus>("off");
 
-  // Wire DBX callbacks before init
+  // Always points at the freshest DB so the sync layers can read it.
+  const dbRef = useRef<JournalDB | null>(null);
+  const setCurrent = (next: JournalDB) => {
+    dbRef.current = next;
+    setDBState(next);
+  };
+
   useEffect(() => {
+    // 1) Local first — instant render, and the safety net.
     const localDB = loadDB();
-    setDBState(localDB);
+    setCurrent(localDB);
 
-    // Give DBX access to the current DB for uploads
-    DBX.getDB = () => localDB;
+    DBX.getDB = () => dbRef.current as JournalDB;
     DBX.onStatus = (s) => setDbxStatus(s);
+    CLOUD.getDB = () => dbRef.current;
+    CLOUD.onStatus = (s) => setCloudStatus(s);
 
-    // Init: handles OAuth redirect and pulls remote if connected
-    DBX.init().then((remote) => {
-      if (remote) {
-        // Dropbox won — adopt remote as source of truth
-        const adopted = adoptRemote(remote);
-        setDBState(adopted);
-        saveDB(adopted);
-        // Update the getDB closure with the adopted version
-        DBX.getDB = () => adopted;
+    (async () => {
+      let working = localDB;
+
+      // 2) Supabase = server source of truth (always-on, tied to auth).
+      let cloudHadData = false;
+      if (CLOUD.available()) {
+        const remote = await CLOUD.pull();
+        if (remote) {
+          working = adoptRemote(remote);
+          cloudHadData = true;
+        }
       }
-      setLoading(false);
-    });
 
-    // Flush on tab close
-    const onUnload = () => DBX.flush();
+      // 3) Dropbox = optional user-owned backup. init() also handles the
+      //    OAuth redirect. Only ADOPT Dropbox data if Supabase had none
+      //    (new user, or Supabase unavailable) — Supabase wins ties.
+      try {
+        const dbxRemote = await DBX.init();
+        if (dbxRemote && !cloudHadData) {
+          working = adoptRemote(dbxRemote);
+        }
+      } catch {
+        /* dropbox optional — ignore */
+      }
+
+      // Commit whichever source won.
+      setCurrent(working);
+      saveDB(working);
+
+      // 4) First-time migration: server row empty but we have real local
+      //    data -> push it up so the user's history lands on the server.
+      if (
+        CLOUD.available() &&
+        !cloudHadData &&
+        ((working.accounts && working.accounts.length) ||
+          (working.trades && working.trades.length))
+      ) {
+        void CLOUD.flush();
+      }
+
+      setLoading(false);
+    })();
+
+    const onUnload = () => {
+      DBX.flush();
+      void CLOUD.flush();
+    };
     window.addEventListener("beforeunload", onUnload);
     return () => {
       window.removeEventListener("beforeunload", onUnload);
       DBX.stopTimer();
+      CLOUD.stopTimer();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keep DBX.getDB in sync whenever db changes
-  useEffect(() => {
-    if (db) DBX.getDB = () => db;
-  }, [db]);
-
   const setDB = useCallback((next: JournalDB) => {
-    setDBState(next);
+    setCurrent(next);
   }, []);
 
   const save = useCallback((next: JournalDB) => {
-    setDBState(next);
-    saveDB(next);
-    DBX.markDirty();
+    setCurrent(next);
+    saveDB(next);       // local cache (always)
+    DBX.markDirty();    // dropbox backup (if connected)
+    CLOUD.markDirty();  // supabase server (if configured)
   }, []);
 
-  const dbxConnect    = useCallback(() => DBX.connect(), []);
+  const dbxConnect = useCallback(() => DBX.connect(), []);
   const dbxDisconnect = useCallback(() => DBX.disconnect(), []);
-  const dbxConnected  = DBX.connected();
+  const dbxConnected = DBX.connected();
 
   if (loading || !db) {
     return (
@@ -83,7 +124,7 @@ export function DBProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <DBContext.Provider value={{ db, setDB, save, loading, dbxStatus, dbxConnected, dbxConnect, dbxDisconnect }}>
+    <DBContext.Provider value={{ db, setDB, save, loading, dbxStatus, dbxConnected, dbxConnect, dbxDisconnect, cloudStatus }}>
       {children}
     </DBContext.Provider>
   );

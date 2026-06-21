@@ -5,6 +5,7 @@ import { useDB } from "@/context/DBContext";
 import { uid, defaultStrategies } from "@/lib/db";
 import EmojiPicker from "@/components/settings/EmojiPicker";
 import type { Broker } from "@/types/journal";
+import { SUPPORT_EMAIL } from "@/lib/config";
 
 const INPUT: React.CSSProperties = {
   background: "var(--panel2)", border: "1px solid var(--line)", borderRadius: 8,
@@ -497,6 +498,31 @@ export default function SettingsView({ theme = "dark", onToggleTheme }: Settings
           </div>
           <input value={onenote} onChange={(e) => setOnenote(e.target.value)}
             placeholder="https://onedrive.live.com/..." style={{ ...INPUT, width: "100%" }} />
+        </SetCard>
+      </div>
+
+      {/* ── Support ── */}
+      <div style={{ marginBottom: 28 }}>
+        <SectionTitle>Support</SectionTitle>
+        <SetCard>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3 }}>Need help, or want a refund?</div>
+          <div style={{ fontSize: 12, color: "var(--mut)", marginBottom: 12, lineHeight: 1.6 }}>
+            Email us and a real person will get back to you. Refunds are handled
+            directly — no need to dispute the charge with your bank.
+          </div>
+          <a
+            href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Aye Aye Trader — support")}`}
+            className="btn"
+            style={{
+              display: "inline-block", textDecoration: "none",
+              background: "var(--panel2)", border: "1px solid var(--line)",
+              borderRadius: 8, color: "var(--txt)", padding: "9px 16px",
+              fontSize: 13, fontWeight: 600,
+            }}
+          >
+            Contact support
+          </a>
+          <div style={{ fontSize: 12, color: "var(--mut)", marginTop: 8 }}>{SUPPORT_EMAIL}</div>
         </SetCard>
       </div>
 
